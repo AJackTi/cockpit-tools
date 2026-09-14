@@ -22,6 +22,7 @@
 ### 变更
 
 - **模型管理默认关闭，并且不再被混合模型路由打开**：升级后首次启动会把历史遗留的「模型管理」统一关闭、恢复跟随官方模型目录，且只执行这一次，之后由你自己开启或关闭。混合模型路由不再改动这个开关：它需要的那份模型目录只在实例运行期间临时生效，停止实例或退出 Cockpit 后自动恢复，其他账号和实例不受影响。
+- **Codex API 服务的 provider 改为跟随官方远程压缩链路**：托管写入的 provider 显示名改为 `OpenAI`，与官方客户端的 provider 能力判断保持一致，使自动压缩和手动压缩都走远程 `/responses/compact`。请求仍先经过本地网关，实际压缩能力由当前选择的上游负责。
 
 ### 修复
 
@@ -35,7 +36,7 @@
 - **修复 Codex 会话管理里的会话名与官方客户端不一致**：会话标题改为按官方客户端的展示规则读取（优先客户端维护的会话展示名，没有生成标题时显示首条消息并截断），不再只认 `session_index.jsonl`，未生成标题的会话不再显示成一串会话 ID；分组标题同时改用官方客户端项目名，在 Codex 里重命名项目后会话管理会同步显示新名称。
 - **修复在会话管理把会话移到废纸篓后 Codex 侧仍然显示**：删除改为调用官方 Codex 的会话删除流程，会话会同时从官方会话列表、状态库与本地会话目录移除，无需重启客户端即可消失；官方删除不可用时会自动回退到原有文件方式，并在结果提示里说明需要重启 Codex 才会同步。
 - **修复 Windows 关闭到托盘后后台额度刷新停止**：只要启用了任意平台的自动刷新，关闭到托盘现在会隐藏主窗口而不是销毁 WebView，现有刷新调度器可以继续运行；当所有自动刷新都禁用时，仍保持原来的销毁 WebView 以省内存行为。
-- **修复严格 Responses 上游因历史工具调用缺少 `call_id` 而拒绝请求**：Codex 请求在转发前会为缺失 `call_id` 的 `function_call` / `custom_tool_call` 补齐 ID，并让对应输出使用同一个 ID；已有 ID 不会被改写。该修复覆盖本地 API 网关与 provider gateway 两条链路。
+- **修复严格 Responses 上游因历史工具调用缺少 `call_id` 而拒绝请求**：Codex 请求在转发前会为缺失 `call_id` 的 `function_call` / `custom_tool_call` 补齐 ID，并让对应输出使用同一个 ID；已有 ID 不会被改写。匿名孤立输出不再被强行分配 `call_missing_output_*` 这类合成 ID，旧会话工具历史不完整时不会再变成 `No tool call found for function call output` 请求。该修复覆盖本地 API 网关与 provider gateway 两条链路。
 - **修复开启模型目录同步后 HTTP-only 自定义 Responses 渠道失效**：缺失 `wireApi` 时现在会按 Responses 处理，关闭 WebSocket 的自定义渠道即使开启模型目录同步也会保留独立的 HTTP-only provider，确保 `supports_websockets = false` 生效，Codex 不再尝试 `wss://.../responses`。
 - **修复 Codex 会话亲和在账号额度耗尽后不故障转移**：选择器包装层现在会把执行结果转发给会话亲和选择器，绑定账号失败后会解绑，下一次请求可切换到其他可用账号。调度选项里的会话亲和开关在服务运行时也可以取消勾选，仅在实际保存调度选项时禁用。
 - **修复 Windows 上 Store 版 Codex 实际已启动却提示启动失败**：当系统入口已经拉起 Codex、但未能匹配到新进程时，旧逻辑会回退直接启动受保护的 `WindowsApps` 可执行文件并返回 `ACCESS_DENIED (os error 5)`。启动器现在会依次尝试 `powershell.exe`、Windows PowerShell 绝对路径和 `pwsh.exe`；确认 Codex 已在运行时按成功处理；不再直接启动 `WindowsApps` 路径，并给出可操作提示，避免误导性的启动失败。
