@@ -2,25 +2,38 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
 
-// 严格 Responses 上游（DeepSeek）按「位置」校验工具调用：每个 tool call 的下一个项必须是它
-// 自己的输出，否则整轮请求被拒（`No tool output found for tool call ...`），而且被拒的这一轮
-// 会留在客户端历史里，线程此后无法继续，只能卸载再加载。
+// 严格 Responses 上游（DeepSeek）按「位置」校验工具调用：同一条 assistant 回合里的调用必须
+// 保持相邻，且这些调用的输出要紧跟在该批次之后，否则整轮请求被拒，而且被拒的这一轮会留在
+// 客户端历史里，线程此后无法继续。
 //
-// Codex 在正常路径上就会破坏这个顺序：工具执行完的 PostToolUse 钩子会立刻把开发消息写进历史，
+// 两种破坏方式对应两条不同的上游报错，见到的都是误导性文案：
+//
+//	调用 → 消息（钩子）→ 输出
+//	  → 400 `No tool output found for tool call ...`
+//	调用A → 输出A → 调用B → 输出B（同一回合的两个调用被输出拆开）
+//	  → 400 `The `reasoning_text` in the thinking mode must be passed back to the API`
+//
+// 第二条最容易被误判成推理回放问题：上游把「输出夹在中间」理解成「新起了一批调用却没有回放
+// 推理」，于是报了 reasoning_text。实测同一份历史保持「调用A → 调用B → 输出A → 输出B」时
+// 稳定 200，改成「调用A → 输出A → 调用B → 输出B」稳定 400。
+//
+// Codex 在正常路径上就会破坏第一种顺序：工具执行完的 PostToolUse 钩子会立刻把开发消息写进历史，
 // 可能早于工具输出项落盘，于是历史里出现
 //
 //	function_call -> message -> function_call_output
 //
 // 官方上游只按 `call_id` 配对、不校验位置，所以一直没暴露；DeepSeek 会校验。
 //
-// 这里在请求出口把顺序还原：每个调用后面紧跟自己的输出，其余项保持相对顺序。已经在位的项不动，
-// 因此正常历史（官方账号、以及本来就合法的 DeepSeek 历史）是逐字节 no-op。
+// 这里在请求出口把顺序还原：连续的调用视为同一批次整体保留，批次结束后再按原有相对顺序放这批
+// 调用的输出；其余项保持相对顺序。已经在位的项不动，因此正常历史（官方账号、以及本来就合法的
+// DeepSeek 历史）是逐字节 no-op。
 
 const (
 	providerToolOrderCallType       = "function_call"
@@ -62,7 +75,7 @@ func providerToolOrderIsOutputItem(itemType string) bool {
 	}
 }
 
-// providerGatewayRepairsToolCallOrderBody 还原「输出紧跟调用」的顺序。
+// providerGatewayRepairsToolCallOrderBody 还原「批次内调用相邻、输出紧跟批次」的顺序。
 //
 // 返回重建后的请求体与被搬动的输出项数量；`ok` 为 false 表示当前请求无法安全重排
 // （例如调用项缺少 `call_id`），调用方应当放弃重排、保持原样转发。
@@ -77,7 +90,6 @@ func providerGatewayRepairsToolCallOrderBody(body []byte) ([]byte, int, bool) {
 		return body, 0, true
 	}
 
-	callIndexByID := make(map[string]int)
 	outputIndexesByID := make(map[string][]int)
 	for index, item := range items {
 		itemType := item.Get("type").String()
@@ -87,9 +99,6 @@ func providerGatewayRepairsToolCallOrderBody(body []byte) ([]byte, int, bool) {
 			if callID == "" {
 				// 没有 call_id 就没法判断归属，交给配对修复处理，这里不猜。
 				return body, 0, false
-			}
-			if _, seen := callIndexByID[callID]; !seen {
-				callIndexByID[callID] = index
 			}
 		case providerToolOrderIsOutputItem(itemType):
 			if callID == "" {
@@ -103,52 +112,65 @@ func providerGatewayRepairsToolCallOrderBody(body []byte) ([]byte, int, bool) {
 	}
 
 	rebuilt := make([]string, 0, len(items))
+	newPosition := make([]int, len(items))
 	emitted := make([]bool, len(items))
-	relocated := 0
-	changed := false
-	for index, item := range items {
+	for index := 0; index < len(items); index++ {
+		item := items[index]
 		if emitted[index] {
 			continue
 		}
 		itemType := item.Get("type").String()
-		if providerToolOrderIsCallItem(itemType) {
-			callID := strings.TrimSpace(item.Get("call_id").String())
-			outputs := outputIndexesByID[callID]
-			if len(outputs) > 0 {
-				// 只有排在调用之后的输出才可能被搬过来；排在调用之前的属于历史损坏，
-				// 不在本函数职责内（配对修复负责丢弃），保持原位让上游给出明确错误。
-				relocatable := make([]int, 0, len(outputs))
-				for _, outputIndex := range outputs {
-					if outputIndex > index {
-						relocatable = append(relocatable, outputIndex)
-					}
-				}
-				alreadyOrdered := len(relocatable) == len(outputs)
-				if alreadyOrdered {
-					for offset, outputIndex := range relocatable {
-						if outputIndex != index+1+offset {
-							alreadyOrdered = false
-							break
-						}
-					}
-				}
-				if len(relocatable) > 0 && !alreadyOrdered {
-					changed = true
-					relocated += len(relocatable)
-					emitted[index] = true
-					rebuilt = append(rebuilt, item.Raw)
-					for _, outputIndex := range relocatable {
-						emitted[outputIndex] = true
-						rebuilt = append(rebuilt, items[outputIndex].Raw)
-					}
+		if !providerToolOrderIsCallItem(itemType) {
+			newPosition[index] = len(rebuilt)
+			emitted[index] = true
+			rebuilt = append(rebuilt, item.Raw)
+			continue
+		}
+
+		// 连续的调用属于同一条 assistant 回合：整体保留相邻，输出放到批次之后。
+		batchEnd := index
+		for batchEnd+1 < len(items) && providerToolOrderIsCallItem(items[batchEnd+1].Get("type").String()) {
+			batchEnd++
+		}
+		outputs := make([]int, 0)
+		collected := make(map[int]bool)
+		for cursor := index; cursor <= batchEnd; cursor++ {
+			callID := strings.TrimSpace(items[cursor].Get("call_id").String())
+			for _, outputIndex := range outputIndexesByID[callID] {
+				// 排在调用之前的输出属于历史损坏，不在这里搬动。
+				if outputIndex <= cursor || emitted[outputIndex] || collected[outputIndex] {
 					continue
 				}
+				collected[outputIndex] = true
+				outputs = append(outputs, outputIndex)
 			}
 		}
-		emitted[index] = true
-		rebuilt = append(rebuilt, item.Raw)
+		// 保持输出原有的相对顺序，尽量少改字节。
+		sort.Ints(outputs)
+		for cursor := index; cursor <= batchEnd; cursor++ {
+			newPosition[cursor] = len(rebuilt)
+			emitted[cursor] = true
+			rebuilt = append(rebuilt, items[cursor].Raw)
+		}
+		for _, outputIndex := range outputs {
+			newPosition[outputIndex] = len(rebuilt)
+			emitted[outputIndex] = true
+			rebuilt = append(rebuilt, items[outputIndex].Raw)
+		}
+		index = batchEnd
 	}
-	if !changed {
+
+	relocated := 0
+	for index, item := range items {
+		if !providerToolOrderIsOutputItem(item.Get("type").String()) {
+			continue
+		}
+		if newPosition[index] != index {
+			relocated++
+		}
+	}
+	if relocated == 0 {
+		// 已经是合法形状：逐字节透传，避免同一份历史因为重排丢掉提示词缓存。
 		return body, 0, true
 	}
 
@@ -156,38 +178,64 @@ func providerGatewayRepairsToolCallOrderBody(body []byte) ([]byte, int, bool) {
 	if err != nil {
 		return body, 0, false
 	}
-	if !providerToolOrderPairsAreAdjacent(gjson.GetBytes(updated, "input")) {
-		// 重排后仍不满足相邻（例如同一调用有多个输出），放弃改动，避免把请求改坏。
+	if !providerToolOrderBatchesAreAdjacent(gjson.GetBytes(updated, "input")) {
+		// 重排后仍不满足「批次内调用相邻、输出紧跟批次」，放弃改动，避免把请求改坏。
 		return body, 0, false
 	}
 	return updated, relocated, true
 }
 
-// providerToolOrderPairsAreAdjacent 校验每个调用后面紧跟自己的输出。
-func providerToolOrderPairsAreAdjacent(input gjson.Result) bool {
+// providerToolOrderBatchesAreAdjacent 校验每个连续调用批次后面紧跟这批调用的输出。
+func providerToolOrderBatchesAreAdjacent(input gjson.Result) bool {
 	if !input.IsArray() {
 		return true
 	}
 	items := input.Array()
-	for index, item := range items {
-		if !providerToolOrderIsCallItem(item.Get("type").String()) {
+	outputCountByID := make(map[string]int)
+	for _, item := range items {
+		if !providerToolOrderIsOutputItem(item.Get("type").String()) {
 			continue
 		}
 		callID := strings.TrimSpace(item.Get("call_id").String())
 		if callID == "" {
 			continue
 		}
-		if index+1 >= len(items) {
-			// 本请求里没有该调用的输出（可能尚未落盘），无法判断。
-			return true
+		outputCountByID[callID]++
+	}
+	for index := 0; index < len(items); index++ {
+		item := items[index]
+		if !providerToolOrderIsCallItem(item.Get("type").String()) {
+			continue
 		}
-		next := items[index+1]
-		if !providerToolOrderIsOutputItem(next.Get("type").String()) {
+		batchEnd := index
+		for batchEnd+1 < len(items) && providerToolOrderIsCallItem(items[batchEnd+1].Get("type").String()) {
+			batchEnd++
+		}
+		expected := make(map[string]int)
+		for cursor := index; cursor <= batchEnd; cursor++ {
+			callID := strings.TrimSpace(items[cursor].Get("call_id").String())
+			if callID == "" {
+				return false
+			}
+			if count := outputCountByID[callID]; count > 0 {
+				expected[callID] += count
+			}
+		}
+		actual := make(map[string]int)
+		position := batchEnd + 1
+		for ; position < len(items) && providerToolOrderIsOutputItem(items[position].Get("type").String()); position++ {
+			callID := strings.TrimSpace(items[position].Get("call_id").String())
+			actual[callID]++
+		}
+		if len(actual) != len(expected) {
 			return false
 		}
-		if strings.TrimSpace(next.Get("call_id").String()) != callID {
-			return false
+		for callID, count := range expected {
+			if actual[callID] != count {
+				return false
+			}
 		}
+		index = batchEnd
 	}
 	return true
 }

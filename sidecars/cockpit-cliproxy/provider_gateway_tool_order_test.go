@@ -88,10 +88,35 @@ func TestProviderGatewayToolOrderMovesMessageOutOfThePair(t *testing.T) {
 	}
 }
 
-func TestProviderGatewayToolOrderInterleavesParallelCalls(t *testing.T) {
+func TestProviderGatewayToolOrderKeepsParallelBatchAdjacent(t *testing.T) {
+	// 同一回合的两个调用必须保持相邻：拆成「调用A → 输出A → 调用B → 输出B」会被 DeepSeek
+	// 判成「新的一批调用没有回放推理」，并以 reasoning_text 缺失拒绝整轮。
 	body := toolOrderBody(
 		`{"type":"function_call","call_id":"call_a","name":"read","arguments":"{}"}`,
 		`{"type":"function_call","call_id":"call_b","name":"read","arguments":"{}"}`,
+		`{"type":"function_call_output","call_id":"call_a","output":"a"}`,
+		`{"type":"function_call_output","call_id":"call_b","output":"b"}`,
+	)
+
+	got, relocated, ok := providerGatewayRepairsToolCallOrderBody(body)
+	if !ok {
+		t.Fatal("reorder should be allowed")
+	}
+	if relocated != 0 {
+		t.Fatalf("batched parallel calls must not be relocated: relocated=%d: %s", relocated, got)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("batched parallel calls changed: %s", got)
+	}
+}
+
+func TestProviderGatewayToolOrderMovesBatchOutputsBehindBatch(t *testing.T) {
+	// 钩子消息插在批次与输出之间时，两个调用仍要相邻，输出整体后移到批次之后。
+	body := toolOrderBody(
+		`{"type":"message","role":"user","content":"run both"}`,
+		`{"type":"function_call","call_id":"call_a","name":"exec_command","arguments":"{}"}`,
+		`{"type":"function_call","call_id":"call_b","name":"exec_command","arguments":"{}"}`,
+		`{"type":"message","role":"developer","content":"hook note"}`,
 		`{"type":"function_call_output","call_id":"call_a","output":"a"}`,
 		`{"type":"function_call_output","call_id":"call_b","output":"b"}`,
 	)
@@ -104,16 +129,75 @@ func TestProviderGatewayToolOrderInterleavesParallelCalls(t *testing.T) {
 		t.Fatalf("relocated = %d, want 2: %s", relocated, got)
 	}
 	want := []string{
+		"message:",
 		"function_call:call_a",
-		"function_call_output:call_a",
 		"function_call:call_b",
+		"function_call_output:call_a",
 		"function_call_output:call_b",
+		"message:",
 	}
 	if strings.Join(toolOrderTypes(got), "|") != strings.Join(want, "|") {
 		t.Fatalf("order = %v, want %v: %s", toolOrderTypes(got), want, got)
 	}
-	if !gjson.ValidBytes(got) {
-		t.Fatalf("result is not valid JSON: %s", got)
+	if !strings.Contains(string(got), "hook note") {
+		t.Fatalf("hook message was dropped: %s", got)
+	}
+}
+
+func TestProviderGatewayToolOrderPreservesOutputOrderWithinBatch(t *testing.T) {
+	// 输出的先后顺序不影响上游校验，保持原有相对顺序、逐字节透传即可。
+	body := toolOrderBody(
+		`{"type":"function_call","call_id":"call_a","name":"read","arguments":"{}"}`,
+		`{"type":"function_call","call_id":"call_b","name":"read","arguments":"{}"}`,
+		`{"type":"function_call_output","call_id":"call_b","output":"b"}`,
+		`{"type":"function_call_output","call_id":"call_a","output":"a"}`,
+	)
+
+	got, relocated, ok := providerGatewayRepairsToolCallOrderBody(body)
+	if !ok || relocated != 0 {
+		t.Fatalf("reversed outputs must stay untouched: ok=%v relocated=%d", ok, relocated)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("reversed outputs changed the body: %s", got)
+	}
+}
+
+func TestProviderGatewayToolOrderKeepsLongBatchAdjacent(t *testing.T) {
+	body := toolOrderBody(
+		`{"type":"function_call","call_id":"call_a","name":"read","arguments":"{}"}`,
+		`{"type":"function_call","call_id":"call_b","name":"read","arguments":"{}"}`,
+		`{"type":"function_call","call_id":"call_c","name":"read","arguments":"{}"}`,
+		`{"type":"function_call_output","call_id":"call_a","output":"a"}`,
+		`{"type":"function_call_output","call_id":"call_b","output":"b"}`,
+		`{"type":"function_call_output","call_id":"call_c","output":"c"}`,
+	)
+
+	got, relocated, ok := providerGatewayRepairsToolCallOrderBody(body)
+	if !ok || relocated != 0 {
+		t.Fatalf("three-call batch must stay untouched: ok=%v relocated=%d", ok, relocated)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("three-call batch changed: %s", got)
+	}
+}
+
+func TestProviderGatewayToolOrderKeepsReasoningTurnBatched(t *testing.T) {
+	// 线上失败请求的最小复刻：推理 + 助手消息 + 两个并行调用 + 两个输出。
+	body := toolOrderBody(
+		`{"type":"reasoning","summary":[{"type":"summary_text","text":"think"}],"encrypted_content":null}`,
+		`{"type":"message","role":"assistant","content":"先核对一下状态"}`,
+		`{"type":"function_call","call_id":"call_a","name":"exec_command","arguments":"{}"}`,
+		`{"type":"function_call","call_id":"call_b","name":"exec_command","arguments":"{}"}`,
+		`{"type":"function_call_output","call_id":"call_a","output":"a"}`,
+		`{"type":"function_call_output","call_id":"call_b","output":"b"}`,
+	)
+
+	got, relocated, ok := providerGatewayRepairsToolCallOrderBody(body)
+	if !ok || relocated != 0 {
+		t.Fatalf("replayed thinking turn must stay untouched: ok=%v relocated=%d", ok, relocated)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("replayed thinking turn changed the body: %s", got)
 	}
 }
 
