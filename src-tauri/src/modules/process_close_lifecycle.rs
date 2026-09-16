@@ -1717,6 +1717,30 @@ function Get-ExePathFromCmdLine([string]$cmdline) {{
 }}
 $expected = Normalize-ExePath $expectedRaw
 if ([string]::IsNullOrWhiteSpace($expected)) {{ exit 0 }}
+function Get-WindowsAppsFamily([string]$path) {{
+  if (-not $path) {{ return $null }}
+  $lower = $path.ToLowerInvariant()
+  $marker = '\windowsapps\'
+  $at = $lower.IndexOf($marker)
+  if ($at -lt 0) {{ return $null }}
+  $after = $lower.Substring($at + $marker.Length)
+  $packageDir = ($after -split '\\')[0]
+  $family = ($packageDir -split '_')[0]
+  if ([string]::IsNullOrWhiteSpace($family)) {{ return $null }}
+  return $family
+}}
+function Test-CodexExeMatch([string]$exe, [string]$expected) {{
+  if (-not $exe -or -not $expected) {{ return $false }}
+  if ($exe -eq $expected) {{ return $true }}
+  $exeFamily = Get-WindowsAppsFamily $exe
+  $expectedFamily = Get-WindowsAppsFamily $expected
+  if (-not $exeFamily -or -not $expectedFamily) {{ return $false }}
+  if ($exeFamily -ne $expectedFamily) {{ return $false }}
+  $exeFile = Split-Path -Leaf $exe
+  $expectedFile = Split-Path -Leaf $expected
+  if (-not $exeFile) {{ return $false }}
+  return ($exeFile.ToLowerInvariant() -eq $expectedFile.ToLowerInvariant())
+}}
 Get-CimInstance Win32_Process |
   Where-Object {{
     if (-not ($processNames -contains $_.Name)) {{
@@ -1724,7 +1748,7 @@ Get-CimInstance Win32_Process |
     }} else {{
       $exe = Normalize-ExePath $_.ExecutablePath
       if (-not $exe) {{ $exe = Normalize-ExePath (Get-ExePathFromCmdLine $_.CommandLine) }}
-      $exe -eq $expected
+      Test-CodexExeMatch $exe $expected
     }}
   }} |
   ForEach-Object {{ "$($_.ProcessId)|$($_.ParentProcessId)|$($_.CommandLine)" }}"#
@@ -1797,6 +1821,59 @@ Get-CimInstance Win32_Process |
     entries
 }
 
+/// 把 Windows 路径统一成小写反斜杠形式，便于跨写法比较（`/` 与 `\` 都接受）。
+#[cfg(any(test, target_os = "windows"))]
+fn normalized_windows_exe_text(path: &str) -> String {
+    path.trim().replace('/', "\\").to_ascii_lowercase()
+}
+
+/// 从商店包路径里取出包族名（`\WindowsApps\` 之后、`_版本` 之前的部分）。
+///
+/// `C:\Program Files\WindowsApps\OpenAI.Codex_26.908.4834.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe`
+/// 会得到 `openai.codex`；非商店路径返回 `None`。
+#[cfg(any(test, target_os = "windows"))]
+fn windowsapps_package_family(path: &str) -> Option<String> {
+    let lower = normalized_windows_exe_text(path);
+    let after = lower.split(r"\windowsapps\").nth(1)?;
+    let package_dir = after.split('\\').next()?;
+    let family = package_dir.split('_').next()?.trim();
+    if family.is_empty() {
+        return None;
+    }
+    Some(family.to_string())
+}
+
+/// 判断进程实际可执行路径是否匹配期望的 Codex 启动路径。
+///
+/// 商店版 Codex 更新后会换新的包目录，客户端也可能自行从新目录重启，此时「配置路径」
+/// 与「实际进程路径」只是同一个包的不同版本目录。若仍按全路径严格比对，会出现
+/// 「客户端明明起来了，Cockpit 却说没启动 / 已关闭」的误判（真实 PID 拿不到时会回退到
+/// spawn 出来的壳进程），官方登录流程更会因此直接判定登录失败。
+///
+/// 因此商店包路径额外放宽为：**同一个包族 + 同一个可执行文件名**。非商店路径仍要求完全一致。
+#[cfg(any(test, target_os = "windows"))]
+fn is_matching_codex_windows_exe(actual: &str, expected: &str) -> bool {
+    if actual.is_empty() || expected.is_empty() {
+        return false;
+    }
+    let actual = normalized_windows_exe_text(actual);
+    let expected = normalized_windows_exe_text(expected);
+    if actual == expected {
+        return true;
+    }
+    let actual_family = windowsapps_package_family(&actual);
+    let expected_family = windowsapps_package_family(&expected);
+    let (Some(actual_family), Some(expected_family)) = (actual_family, expected_family) else {
+        return false;
+    };
+    if actual_family != expected_family {
+        return false;
+    }
+    let actual_file = actual.rsplit('\\').next().unwrap_or(actual.as_str());
+    let expected_file = expected.rsplit('\\').next().unwrap_or(expected.as_str());
+    !actual_file.is_empty() && actual_file == expected_file
+}
+
 #[cfg(target_os = "windows")]
 fn collect_codex_process_entries_from_sysinfo_fallback(
     expected_exe_path: &str,
@@ -1838,7 +1915,8 @@ fn collect_codex_process_entries_from_sysinfo_fallback(
             continue;
         }
         let (resolved_exe, _) = resolve_windows_process_exe_for_match(process);
-        if resolved_exe.as_deref() != Some(expected.as_str()) {
+        let resolved_exe = resolved_exe.unwrap_or_default();
+        if !is_matching_codex_windows_exe(&resolved_exe, &expected) {
             continue;
         }
 
@@ -1900,7 +1978,8 @@ fn collect_codex_main_process_pids_from_sysinfo_fast(expected_exe_path: &str) ->
             continue;
         }
         let (resolved_exe, _) = resolve_windows_process_exe_for_match(process);
-        if resolved_exe.as_deref() != Some(expected.as_str()) {
+        let resolved_exe = resolved_exe.unwrap_or_default();
+        if !is_matching_codex_windows_exe(&resolved_exe, &expected) {
             continue;
         }
 
