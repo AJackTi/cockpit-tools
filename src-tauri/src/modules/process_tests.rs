@@ -269,10 +269,26 @@ mod codex_launch_args_tests {
 
     #[test]
     fn managed_store_launch_error_is_machine_readable_and_keeps_causes() {
-        let error = codex_managed_store_launch_unsafe_error("denied", "fallback failed");
+        let error = codex_managed_store_launch_unsafe_error(
+            "denied",
+            "fallback failed",
+            "launch_path=C:\\Program Files\\WindowsApps\\OpenAI.Codex_1.0\\app\\ChatGPT.exe; launch_path_exists=true",
+        );
         assert!(error.starts_with(CODEX_MANAGED_STORE_LAUNCH_UNSAFE_PREFIX));
         assert!(error.contains("direct_error=denied"));
         assert!(error.contains("powershell_error=fallback failed"));
+        // 诊断信息要跟着错误一起回传，用户复制错误即可让支持侧看到实际路径。
+        assert!(error.contains("launch_path="));
+        assert!(error.contains("launch_path_exists=true"));
+    }
+
+    #[test]
+    fn managed_store_launch_error_omits_empty_diagnostics() {
+        let error = codex_managed_store_launch_unsafe_error("denied", "fallback failed", "  ");
+        assert_eq!(
+            error,
+            "CODEX_MANAGED_STORE_LAUNCH_UNSAFE:direct_error=denied; powershell_error=fallback failed"
+        );
     }
 }
 
