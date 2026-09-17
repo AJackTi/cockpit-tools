@@ -2563,14 +2563,18 @@ fn quote_windows_command_argument(argument: &str) -> String {
 ///
 /// 启动路径形如 `<InstallLocation>\app\ChatGPT.exe`，因此去掉两级即安装根目录；
 /// 非商店路径返回 `None`。
+///
+/// 这里按文本解析而不是 `Path::parent()`：该函数只处理 Windows 路径，而
+/// `Path::parent()` 在非 Windows 主机（单元测试）上不会把 `\` 当分隔符。
 #[cfg(any(test, target_os = "windows"))]
 fn windowsapps_install_location_from_launch_path(launch_path: &Path) -> Option<String> {
     if !is_windowsapps_launch_path(launch_path) {
         return None;
     }
-    let app_dir = launch_path.parent()?;
-    let install_location = app_dir.parent()?;
-    let text = install_location.to_string_lossy().trim().to_string();
+    let normalized = launch_path.to_string_lossy().replace('/', "\\");
+    let trimmed = normalized.trim_end_matches('\\');
+    let install_location = trimmed.rsplitn(3, '\\').nth(2)?;
+    let text = install_location.trim().to_string();
     if text.is_empty() {
         return None;
     }
