@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Fixed "Official sign-in" always failing on the Store build of Codex with "the Store package folder may have been replaced by an update"**: Windows refuses to let processes outside the package execute the official client under `C:\Program Files\WindowsApps\...` (`os error 5` / `Access is denied`), and PowerShell's `Start-Process` goes down the same refused path, so the direct launch and its fallback fail together even though the path itself is perfectly valid — re-detecting the path can never fix it. When both fail, the launcher now falls back to a **package-identity activation** (`Invoke-CommandInDesktopPackage`), which carries `CODEX_HOME`, the isolated user-data directory, and the `NODE_OPTIONS` injection used by official sign-in into the real client, restoring multi-instance and "Official sign-in" on the Store build. The failure message now states the real cause and suggests repairing or reinstalling the Store build of Codex.
 - **Store launch failures no longer surface a raw internal error string**: they now use the shared Windows operation dialog, which explains the cause and offers a **Re-detect path and retry** button, and the diagnostics can be copied together with the error.
 - **Parallel tool calls are now disabled in requests to DeepSeek through the gateway**: this reduces the number of parallel batches that corrupt call and output order, and the batch-order restore covers histories that are already on disk.
 

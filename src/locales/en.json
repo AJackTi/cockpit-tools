@@ -123,7 +123,7 @@
     "windowsOperation": {
       "title": "Windows operation incomplete",
       "accessDeniedDescription": "Windows denied this operation. The target may be running with higher privileges or stored in a protected location.",
-      "storeLaunchBlockedDescription": "Windows could not run the currently configured Codex client: the Store package folder may have been replaced by an update, or it no longer allows execution. Launching directly was blocked so the wrong account is not opened. Use \"Re-detect path and retry\"; if it still fails, switch this instance to CLI launch mode.",
+      "storeLaunchBlockedDescription": "Windows rejected every way of launching the Store version of the Codex client (direct launch, PowerShell launch, and package-identity launch), so launching was blocked to avoid opening the wrong account. In most cases the Store version of Codex needs repair or reinstallation (check for updates and reinstall it from the Microsoft Store). You can also use \"Re-detect path and retry\"; if it still fails, switch this instance to CLI launch mode.",
       "repairPath": "Re-detect path and retry",
       "fileInUseDescription": "The target file is in use by another program. Close the program and try again.",
       "programNotFoundDescription": "Windows could not find the program required for this operation. Check the installation or configured path.",
