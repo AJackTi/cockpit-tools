@@ -2109,7 +2109,6 @@ fn resolve_codebuddy_macos_exec_path(path_str: &str) -> Option<std::path::PathBu
     resolve_macos_exec_path(path_str, "CodeBuddy")
 }
 
-#[cfg(target_os = "windows")]
 /// 商店版 Codex 桌面端在 `InstallLocation` 下的约定相对路径，取自 `AppxManifest.xml`
 /// 里 `Application Id="App"` 的 `Executable`。
 #[cfg(any(test, target_os = "windows"))]
@@ -2121,13 +2120,16 @@ const CODEX_STORE_GUI_RELATIVE_EXE: &str = r"app\ChatGPT.exe";
 /// `app\resources\codex.exe`（CLI），都不能当官方桌面端的启动路径。
 #[cfg(any(test, target_os = "windows"))]
 fn is_chatgpt_store_gui_exe(path: &std::path::Path) -> bool {
-    path.file_name()
-        .and_then(|value| value.to_str())
+    // 测试会在非 Windows 平台构造 Windows 风格路径，Unix 下 `Path::file_name()`
+    // 不把 `\` 当分隔符，会返回整串；这里按两种分隔符取最后一段。
+    path.to_string_lossy()
+        .rsplit(|value| value == '\\' || value == '/')
+        .next()
         .is_some_and(|value| value.eq_ignore_ascii_case("ChatGPT.exe"))
 }
 
 /// 读取 `AppxManifest.xml` 里 `Application Id="App"` 的 `Executable`。
-#[cfg(target_os = "windows")]
+#[cfg(any(test, target_os = "windows"))]
 fn appx_manifest_gui_executable(install_location: &std::path::Path) -> Option<String> {
     let bytes = std::fs::read(install_location.join("AppxManifest.xml")).ok()?;
     appx_manifest_gui_executable_from_text(&String::from_utf8_lossy(&bytes))
