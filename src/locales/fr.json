@@ -2806,6 +2806,33 @@
         "placeholder": "Rechercher des comptes..."
       }
     },
+    "turnState": {
+      "checkAction": "Contrôle des risques",
+      "checkActionTitle": "Contrôle le x-codex-turn-state du serveur pour les comptes sélectionnés (tous les comptes OAuth si aucune sélection).",
+      "modalTitle": "Contrôle des risques du compte",
+      "checkAll": "Tout contrôler",
+      "checkOne": "Contrôler",
+      "checking": "Contrôle en cours",
+      "checkingCount": "{{count}} en cours",
+      "accountCount": "{{count}} comptes contrôlables",
+      "emptyAccounts": "Aucun compte OAuth à contrôler (les comptes à clé API ne renvoient pas de state).",
+      "neverChecked": "Pas encore contrôlé",
+      "lastChecked": "Dernier contrôle {{time}}",
+      "checkFailed": "Échec du contrôle : {{message}}",
+      "statusNormal": "Correct",
+      "statusAbnormal": "Anormal",
+      "statusSuspected": "Risque suspecté",
+      "statusUnknown": "Non contrôlé",
+      "stateLength": "longueur state {{length}}",
+      "stateMissing": "Aucun state",
+      "reasonAbnormal": "Longueur de state anormale",
+      "reasonMissing": "Réponse sans state",
+      "openCheckTitle": "Cliquez pour ouvrir le contrôle des risques",
+      "logHint": "x-codex-turn-state du serveur : 312 indique un risque suspecté, 292/332 restent normaux.",
+      "logSuspectedWithLength": "Risque suspecté · state {{length}}",
+      "reasonSuspected": "state vaut 312",
+      "stateLengthAbnormal": "state {{length}} (anormal)"
+    },
     "wakeup": {
       "tab": "Tâches de réveil",
       "subtitle": "Planifiez des tâches de réveil Codex, testez le chemin du CLI et consultez l’historique des exécutions.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "Impossible d’enregistrer la vitesse : {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "Ajouter quand même le compte au service API ?",
-      "accountRiskConfirmMessage": "Le service API peut être considéré comme un usage anormal et entraîner un marquage ou une baisse de qualité du compte ; déconseillé pour le moment. Continuer ?",
       "navTitle": "Service API Codex",
       "title": "Service API Codex",
       "openPage": "Ouvrir le service API",

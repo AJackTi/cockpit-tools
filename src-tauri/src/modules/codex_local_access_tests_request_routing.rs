@@ -222,6 +222,8 @@ data: {"type":"response.completed","response":{"id":"resp_123","usage":{"input_t
             request_kind: "text".to_string(),
             service_tier: None,
             reasoning_effort: None,
+            turn_state_length: None,
+            turn_state_class: None,
             success: false,
             status: Some(200),
             error_category: Some("request_failed".to_string()),

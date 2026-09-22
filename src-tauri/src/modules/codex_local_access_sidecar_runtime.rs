@@ -860,6 +860,8 @@ async fn record_sidecar_usage_event(event: SidecarUsageEvent) {
             reasoning_effort: event.reasoning_effort.as_deref(),
             requested_model: requested_model.as_deref(),
             upstream_model: upstream_model.as_deref(),
+            turn_state_length: event.turn_state_length.filter(|value| *value > 0),
+            turn_state_class: normalize_turn_state_class(event.turn_state_class.as_deref()),
         },
     )
     .await
@@ -870,6 +872,43 @@ async fn record_sidecar_usage_event(event: SidecarUsageEvent) {
         ));
     }
     schedule_sidecar_auto_restart(&event);
+    record_sidecar_turn_state_observation(&event).await;
+}
+
+/// 网关旁路观测：官方 OAuth 账号的上游响应会带 `x-codex-turn-state`。
+/// 未返回 state 的请求（第三方上游、内部端点）不参与风控判定，避免误报。
+async fn record_sidecar_turn_state_observation(event: &SidecarUsageEvent) {
+    if parse_sidecar_request_kind(&event.request_kind) != CodexLocalAccessRequestKind::Text {
+        return;
+    }
+    let Some(account_id) = non_empty_sidecar_string(&event.account_id) else {
+        return;
+    };
+    let Some(account) = codex_account::load_account(account_id.as_str()) else {
+        return;
+    };
+    if account.is_api_key_auth() {
+        return;
+    }
+    let class = match normalize_turn_state_class(event.turn_state_class.as_deref()) {
+        Some(class) => class,
+        None => match event.turn_state_length {
+            Some(length) => classify_turn_state_length(Some(length)),
+            None => return,
+        },
+    };
+    if class == CODEX_TURN_STATE_CLASS_MISSING {
+        return;
+    }
+    let observation = CodexTurnStateObservation {
+        observed_at: now_ms(),
+        source: turn_state_observation_source_gateway(),
+        class: class.to_string(),
+        length: event.turn_state_length.filter(|value| *value > 0),
+        http_status: event.status,
+        reason: turn_state_observation_reason(class),
+    };
+    record_codex_turn_state_observation_async(account_id, observation).await;
 }
 
 type SharedSidecarStartupDiagnostics = Arc<Mutex<SidecarStartupDiagnostics>>;

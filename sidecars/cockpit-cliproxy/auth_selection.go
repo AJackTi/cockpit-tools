@@ -25,6 +25,7 @@ import (
 	"time"
 
 	internallogging "github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
 
 	sdkauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
 
@@ -1553,6 +1554,12 @@ func (p *usagePlugin) HandleUsage(ctx context.Context, record coreusage.Record) 
 			TokenBreakdown:  record.Detail.TokenBreakdown,
 		},
 		RequestedAtMS: record.RequestedAt.UnixMilli(),
+	}
+	// 上游响应头的旁路观测：只带出长度与分类，state 原文不落库。
+	if observation, ok := helps.TakeTurnStateObservation(payload.RequestID); ok {
+		length := observation.Length
+		payload.TurnStateLength = &length
+		payload.TurnStateClass = observation.Class
 	}
 	if sink, ok := ctx.Value(websocketUsageContextKey).(*websocketUsageSink); ok {
 		sink.record(record, payload)

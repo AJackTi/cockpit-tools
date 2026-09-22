@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import "./CodexAccountDialogs.css";
-import { Plus, RefreshCw, Download, Upload, Trash2, X, Globe, KeyRound, Power, Copy, Check, Play, Pause, RotateCw, CircleAlert, Info, Rows3, LayoutGrid, List, Search, ArrowDownWideNarrow, ArrowUp, ArrowDown, GripVertical, Clock, Tag, Star, Eye, EyeOff, BookOpen, FileText, ExternalLink, FolderOpen, FolderPlus, ChevronRight, LogOut, Terminal, ChevronDown } from "lucide-react";
+import { Plus, RefreshCw, Download, Upload, Trash2, X, Globe, KeyRound, Power, Copy, Check, Play, Pause, RotateCw, CircleAlert, Info, Rows3, LayoutGrid, List, Search, ArrowDownWideNarrow, ArrowUp, ArrowDown, GripVertical, Clock, Tag, Star, Eye, EyeOff, BookOpen, FileText, ExternalLink, FolderOpen, FolderPlus, ChevronRight, LogOut, Terminal, ChevronDown, ShieldAlert } from "lucide-react";
 import * as codexLocalAccessService from "../services/codexLocalAccessService";
 import { TagEditModal } from "../components/TagEditModal";
 import { ExportJsonModal } from "../components/ExportJsonModal";
@@ -13,7 +13,8 @@ import { CodexGroupAccountPickerModal } from "../components/CodexGroupAccountPic
 import { CodexLocalAccessModal } from "../components/CodexLocalAccessModal";
 import { CodexInstanceGatewaysModal } from "../components/CodexInstanceGatewaysModal";
 import { CodexAccountPoolHealthModal } from "../components/CodexAccountPoolHealthModal";
-import { isCodexApiKeyAccount, isCodexChatCompletionsApiKeyAccount, isCodexNewApiAccount } from "../types/codex";
+import { CodexAccountTurnStateModal } from "../components/codex/CodexAccountTurnStateModal";
+import { isCodexApiKeyAccount, isCodexChatCompletionsApiKeyAccount, isCodexNewApiAccount, type CodexAccount } from "../types/codex";
 import { QuickSettingsPopover } from "../components/QuickSettingsPopover";
 import { MultiSelectFilterDropdown } from "../components/MultiSelectFilterDropdown";
 import { SingleSelectFilterDropdown } from "../components/SingleSelectFilterDropdown";
@@ -33,6 +34,7 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
     accountNoteCopiedKey,
     accountNoteError,
     accountNoteErrorScrollKey,
+    accountTurnStateMap,
     accountNoteFieldErrors,
     accountNoteMailPreview,
     accountNoteMailPreviewError,
@@ -72,6 +74,7 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
     closeLocalAccessRiskNotice,
     closeQuickSwitchModal,
     closeResetCreditConfirmModal,
+    closeTurnStateCheckModal,
     codexAccountSortOptions,
     codexGroups,
     codexOverviewGroupFilterOptions,
@@ -194,6 +197,7 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
     hasActiveOverviewFilters,
     hasDetectableFullQuotaWakeupAccounts,
     hasGroupEntryCards,
+    hasTurnStateCheckableAccounts,
     instanceGateways,
     instanceGatewaysError,
     instanceGatewaysLoading,
@@ -235,6 +239,7 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
     openCodexApiServicePage,
     openFormattedExportSavedDirectory,
     openFullQuotaWakeupTestModal,
+    openTurnStateCheckModal,
     overviewAccounts,
     overviewCurrentAccountId,
     overviewFilterChips,
@@ -244,6 +249,8 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
     page,
     paginatedAccounts,
     paginatedGroupedAccounts,
+    probeAccountTurnState,
+    probeAccountsTurnState,
     pagination,
     pendingOAuthEmailInput,
     pendingOAuthFieldErrors,
@@ -350,6 +357,10 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
     toggleTagFilterValue,
     updateActiveAccountNoteForm,
     viewMode,
+    turnStateCheckableAccountIds,
+    turnStateCheckOpen,
+    turnStateErrors,
+    turnStateProbingIds,
   } = props;
   useModalScrollLock(Boolean(quickSwitchAccountId || editingApiKeyCredentialsId));
   return (
@@ -775,8 +786,24 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
                   {(selected.size > 0 ||
                     errorAccountIds.length > 0 ||
                     authFailedExportAccountIds.length > 0 ||
-                    hasDetectableFullQuotaWakeupAccounts) && (
+                    hasDetectableFullQuotaWakeupAccounts ||
+                    hasTurnStateCheckableAccounts) && (
                     <div className="codex-overview-selection-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary codex-overview-turn-state-btn"
+                        onClick={openTurnStateCheckModal}
+                        disabled={!hasTurnStateCheckableAccounts}
+                        title={t(
+                          "codex.turnState.checkActionTitle",
+                          "检测所选账号（未选择时检测全部 OAuth 账号）的上游 x-codex-turn-state。",
+                        )}
+                      >
+                        <ShieldAlert size={14} />
+                        <span>
+                          {t("codex.turnState.checkAction", "风控检测")}
+                        </span>
+                      </button>
                       <button
                         type="button"
                         className="btn btn-secondary codex-overview-full-quota-wakeup-btn"
@@ -3645,6 +3672,31 @@ export function CodexAccountsOverviewPanel(props: CodexAccountsViewProps) {
             sourceGroupId={activeGroupId ?? undefined}
             onAdded={reloadCodexGroups}
           />
+
+          {turnStateCheckOpen && (
+            <CodexAccountTurnStateModal
+              accounts={turnStateCheckableAccountIds
+                .map((accountId) =>
+                  accounts.find((account) => account.id === accountId),
+                )
+                .filter((account): account is CodexAccount =>
+                  Boolean(account),
+                )}
+              statusMap={accountTurnStateMap}
+              probingIds={turnStateProbingIds}
+              errors={turnStateErrors}
+              maskAccountText={maskAccountText}
+              onProbe={(accountId) => void probeAccountTurnState(accountId)}
+              onProbeAll={(accountIds) =>
+                void probeAccountsTurnState(
+                  selected.size > 0
+                    ? accountIds.filter((accountId) => selected.has(accountId))
+                    : accountIds,
+                )
+              }
+              onClose={closeTurnStateCheckModal}
+            />
+          )}
         </>
       );
 }

@@ -2065,6 +2065,8 @@ struct CodexOfficialWakeupHttpResponse {
     account: CodexAccount,
     status: StatusCode,
     body: String,
+    /// 上游响应头 `x-codex-turn-state` 原文；只用于当场分级，不写盘。
+    turn_state_value: Option<String>,
 }
 
 /// API 直连唤醒使用的上游代理与超时配置：沿用用户已保存的 API 服务网络设置，
@@ -2136,6 +2138,11 @@ async fn send_agent_identity_wakeup_request_with_base_urls(
         )
         .await?;
         let status = response.status();
+        let turn_state_value = response
+            .headers()
+            .get(CODEX_TURN_STATE_HEADER_NAME)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string);
         let raw_body = response
             .text()
             .await
@@ -2155,6 +2162,7 @@ async fn send_agent_identity_wakeup_request_with_base_urls(
             account: current,
             status,
             body,
+            turn_state_value,
         });
     }
 
@@ -2253,7 +2261,7 @@ pub async fn run_official_wakeup_chat(
             detail
         )
     };
-    let (account, status, body_text) = if account.is_agent_identity_auth() {
+    let (account, status, body_text, turn_state_value) = if account.is_agent_identity_auth() {
         let response = send_agent_identity_wakeup_request_with_base_urls(
             &account,
             &upstream_target,
@@ -2267,7 +2275,12 @@ pub async fn run_official_wakeup_chat(
         )
         .await
         .map_err(format_transport_error)?;
-        (response.account, response.status, response.body)
+        (
+            response.account,
+            response.status,
+            response.body,
+            response.turn_state_value,
+        )
     } else {
         let response = send_upstream_request(
             "POST",
@@ -2284,12 +2297,37 @@ pub async fn run_official_wakeup_chat(
         .await
         .map_err(format_transport_error)?;
         let status = response.status();
+        let turn_state_value = response
+            .headers()
+            .get(CODEX_TURN_STATE_HEADER_NAME)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string);
         let body_text = response
             .text()
             .await
             .map_err(|e| format!("读取 API 直连唤醒响应失败: {}", e))?;
-        (account, status, body_text)
+        (account, status, body_text, turn_state_value)
     };
+
+    // 唤醒链路同样记录 state 观测：账号风控状态与 API 服务请求日志共用同一份观测数据。
+    let (state_length, state_class) = observe_turn_state_header_value(turn_state_value.as_deref());
+    let wakeup_error_message = if status.is_success() {
+        None
+    } else {
+        extract_upstream_error_message(&body_text)
+    };
+    record_codex_turn_state_observation_async(
+        account.id.clone(),
+        CodexTurnStateObservation {
+            observed_at: now_ms(),
+            source: turn_state_observation_source_wakeup(),
+            class: state_class.to_string(),
+            length: state_length,
+            http_status: Some(status.as_u16()),
+            reason: turn_state_observation_reason(state_class),
+        },
+    )
+    .await;
 
     if !status.is_success() {
         let message = extract_upstream_error_message(&body_text)

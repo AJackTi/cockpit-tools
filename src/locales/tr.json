@@ -2806,6 +2806,33 @@
         "placeholder": "Hesap ara..."
       }
     },
+    "turnState": {
+      "checkAction": "Risk denetimi",
+      "checkActionTitle": "Seçili hesaplar için upstream x-codex-turn-state değerini denetler (seçim yoksa tüm OAuth hesapları).",
+      "modalTitle": "Hesap risk denetimi",
+      "checkAll": "Tümünü denetle",
+      "checkOne": "Denetle",
+      "checking": "Denetleniyor",
+      "checkingCount": "{{count}} denetleniyor",
+      "accountCount": "{{count}} denetlenebilir hesap",
+      "emptyAccounts": "Denetlenecek OAuth hesabı yok (API anahtarı hesapları state döndürmez).",
+      "neverChecked": "Henüz denetlenmedi",
+      "lastChecked": "Son denetim {{time}}",
+      "checkFailed": "Denetim başarısız: {{message}}",
+      "statusNormal": "Sorunsuz",
+      "statusAbnormal": "Anormal",
+      "statusSuspected": "Risk şüphesi",
+      "statusUnknown": "Denetlenmedi",
+      "stateLength": "state uzunluğu {{length}}",
+      "stateMissing": "state yok",
+      "reasonAbnormal": "state uzunluğu anormal",
+      "reasonMissing": "Yanıtta state yok",
+      "openCheckTitle": "Risk denetimini açmak için tıklayın",
+      "logHint": "Upstream x-codex-turn-state: 312 risk şüphesi sayılır, 292/332 normaldir.",
+      "logSuspectedWithLength": "Risk şüphesi · state {{length}}",
+      "reasonSuspected": "state 312",
+      "stateLengthAbnormal": "state {{length}} (anormal)"
+    },
     "wakeup": {
       "tab": "Uyandırma görevleri",
       "subtitle": "Codex uyandırma görevlerini planlayın, CLI yolunu test edin ve çalışma geçmişini inceleyin.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "Hız kaydedilemedi: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "Hesap yine de API hizmetine eklensin mi?",
-      "accountRiskConfirmMessage": "API hizmeti anormal kullanım sayılabilir; hesap işaretlenebilir veya kalitesi düşebilir. Şu sıralar önerilmez. Devam edilsin mi?",
       "navTitle": "Codex API Hizmeti",
       "title": "Codex API Hizmeti",
       "openPage": "API hizmetini aç",

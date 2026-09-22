@@ -291,6 +291,47 @@
   flex-shrink: 0;
 }
 
+/* 风控检测徽标：由上游 x-codex-turn-state 观测定级，点击查看依据。 */
+.codex-accounts-page .codex-status-pill.turn-state-suspected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.26);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.codex-accounts-page .codex-status-pill.turn-state-abnormal {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.codex-accounts-page .codex-status-pill.turn-state-suspected:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.42);
+}
+
+.codex-accounts-page .codex-status-pill.turn-state-abnormal:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.46);
+}
+
+.codex-accounts-page .codex-status-pill.turn-state-suspected:disabled,
+.codex-accounts-page .codex-status-pill.turn-state-abnormal:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .codex-accounts-page .codex-status-pill.turn-state-suspected {
+  color: #f87171;
+}
+
+[data-theme="dark"] .codex-accounts-page .codex-status-pill.turn-state-abnormal {
+  color: #fbbf24;
+}
+
 .codex-accounts-page .codex-status-pill.quota-refresh {
   background: color-mix(in srgb, var(--primary) 7%, var(--bg-secondary));
   color: color-mix(in srgb, var(--primary) 72%, var(--text-secondary));

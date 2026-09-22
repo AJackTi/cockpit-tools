@@ -2806,6 +2806,33 @@
         "placeholder": "Cerca account..."
       }
     },
+    "turnState": {
+      "checkAction": "Controllo rischio",
+      "checkActionTitle": "Controlla l'x-codex-turn-state dell'upstream per gli account selezionati (tutti gli account OAuth se non c'è selezione).",
+      "modalTitle": "Controllo rischio account",
+      "checkAll": "Controlla tutto",
+      "checkOne": "Controlla",
+      "checking": "Controllo in corso",
+      "checkingCount": "Controllo di {{count}}",
+      "accountCount": "{{count}} account controllabili",
+      "emptyAccounts": "Nessun account OAuth da controllare (gli account con API key non restituiscono state).",
+      "neverChecked": "Mai controllato",
+      "lastChecked": "Ultimo controllo {{time}}",
+      "checkFailed": "Controllo non riuscito: {{message}}",
+      "statusNormal": "Regolare",
+      "statusAbnormal": "Anomalo",
+      "statusSuspected": "Rischio sospetto",
+      "statusUnknown": "Non controllato",
+      "stateLength": "lunghezza state {{length}}",
+      "stateMissing": "Nessuno state",
+      "reasonAbnormal": "Lunghezza state anomala",
+      "reasonMissing": "Risposta senza state",
+      "openCheckTitle": "Fai clic per aprire il controllo rischio",
+      "logHint": "x-codex-turn-state upstream: 312 indica rischio sospetto, 292/332 restano normali.",
+      "logSuspectedWithLength": "Rischio sospetto · state {{length}}",
+      "reasonSuspected": "state è 312",
+      "stateLengthAbnormal": "state {{length}} (anomalo)"
+    },
     "wakeup": {
       "tab": "Attività di risveglio",
       "subtitle": "Pianifica attività di risveglio Codex, verifica il percorso del CLI e controlla la cronologia di esecuzione.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "Impossibile salvare la velocità: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "Aggiungere comunque l'account al servizio API?",
-      "accountRiskConfirmMessage": "Il servizio API può essere considerato un uso anomalo e causare la segnalazione o il degrado dell'account; al momento non è consigliato. Continuare?",
       "navTitle": "Servizio API Codex",
       "title": "Servizio API Codex",
       "openPage": "Apri servizio API",

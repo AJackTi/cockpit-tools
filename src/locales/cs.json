@@ -2806,6 +2806,33 @@
         "placeholder": "Hledat účty..."
       }
     },
+    "turnState": {
+      "checkAction": "Kontrola rizika",
+      "checkActionTitle": "Zkontroluje x-codex-turn-state z upstreamu u vybraných účtů (bez výběru u všech účtů OAuth).",
+      "modalTitle": "Kontrola rizika účtu",
+      "checkAll": "Zkontrolovat vše",
+      "checkOne": "Zkontrolovat",
+      "checking": "Probíhá kontrola",
+      "checkingCount": "Kontrola {{count}}",
+      "accountCount": "{{count}} kontrolovatelných účtů",
+      "emptyAccounts": "Žádné účty OAuth ke kontrole (účty s API klíčem nevrací state).",
+      "neverChecked": "Zatím nezkontrolováno",
+      "lastChecked": "Poslední kontrola {{time}}",
+      "checkFailed": "Kontrola selhala: {{message}}",
+      "statusNormal": "V pořádku",
+      "statusAbnormal": "Neobvyklé",
+      "statusSuspected": "Podezření na riziko",
+      "statusUnknown": "Nekontrolováno",
+      "stateLength": "délka state {{length}}",
+      "stateMissing": "Bez state",
+      "reasonAbnormal": "Neobvyklá délka state",
+      "reasonMissing": "Odpověď bez state",
+      "openCheckTitle": "Kliknutím otevřete kontrolu rizika",
+      "logHint": "x-codex-turn-state z upstreamu: 312 znamená podezření na riziko, 292/332 jsou v pořádku.",
+      "logSuspectedWithLength": "Podezření na riziko · state {{length}}",
+      "reasonSuspected": "state je 312",
+      "stateLengthAbnormal": "state {{length}} (neobvyklé)"
+    },
     "wakeup": {
       "tab": "Úlohy probuzení",
       "subtitle": "Plánujte úlohy probuzení Codexu, testujte cestu ke CLI a kontrolujte historii spuštění.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "Rychlost se nepodařilo uložit: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "Přesto přidat účet do služby API?",
-      "accountRiskConfirmMessage": "Služba API může být vyhodnocena jako neobvyklé použití a účet může být označen nebo omezen; v současnosti se nedoporučuje. Pokračovat?",
       "navTitle": "Služba Codex API",
       "title": "Služba Codex API",
       "openPage": "Otevřít službu API",

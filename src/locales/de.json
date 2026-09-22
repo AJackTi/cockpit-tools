@@ -2806,6 +2806,33 @@
         "placeholder": "Konten suchen..."
       }
     },
+    "turnState": {
+      "checkAction": "Risikoprüfung",
+      "checkActionTitle": "Prüft x-codex-turn-state vom Upstream für die ausgewählten Konten (ohne Auswahl alle OAuth-Konten).",
+      "modalTitle": "Konto-Risikoprüfung",
+      "checkAll": "Alle prüfen",
+      "checkOne": "Prüfen",
+      "checking": "Prüfe",
+      "checkingCount": "{{count}} werden geprüft",
+      "accountCount": "{{count}} prüfbare Konten",
+      "emptyAccounts": "Keine OAuth-Konten zum Prüfen (API-Key-Konten liefern keinen Upstream-State).",
+      "neverChecked": "Noch nicht geprüft",
+      "lastChecked": "Zuletzt geprüft {{time}}",
+      "checkFailed": "Prüfung fehlgeschlagen: {{message}}",
+      "statusNormal": "Unauffällig",
+      "statusAbnormal": "Auffällig",
+      "statusSuspected": "Risikoverdacht",
+      "statusUnknown": "Nicht geprüft",
+      "stateLength": "state-Länge {{length}}",
+      "stateMissing": "Kein state",
+      "reasonAbnormal": "state-Länge unerwartet",
+      "reasonMissing": "Antwort ohne state",
+      "openCheckTitle": "Klicken, um die Risikoprüfung zu öffnen",
+      "logHint": "Upstream x-codex-turn-state: 312 gilt als Risikoverdacht, 292/332 bleiben normal.",
+      "logSuspectedWithLength": "Risikoverdacht · state {{length}}",
+      "reasonSuspected": "state ist 312",
+      "stateLengthAbnormal": "state {{length}} (auffällig)"
+    },
     "wakeup": {
       "tab": "Wakeup-Aufgaben",
       "subtitle": "Plane Codex-Wakeup-Aufgaben, teste den CLI-Pfad und prüfe den Ausführungsverlauf.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "Tempo konnte nicht gespeichert werden: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "Konto trotzdem zum API-Dienst hinzufügen?",
-      "accountRiskConfirmMessage": "Der API-Dienst kann als ungewöhnliche Nutzung gelten; das Konto kann dadurch markiert oder herabgestuft werden. Derzeit nicht empfohlen. Trotzdem fortfahren?",
       "navTitle": "Codex-API-Dienst",
       "title": "Codex-API-Dienst",
       "openPage": "API-Dienst öffnen",

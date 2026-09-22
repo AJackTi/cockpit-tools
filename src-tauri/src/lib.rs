@@ -1092,6 +1092,8 @@ pub fn run() {
             commands::codex::codex_local_access_rotate_api_key,
             commands::codex::codex_local_access_update_bound_oauth_account,
             commands::codex::codex_local_access_clear_stats,
+            commands::codex::codex_account_turn_state_statuses,
+            commands::codex::codex_probe_account_turn_state,
             commands::codex::codex_local_access_query_stats,
             commands::codex::codex_local_access_query_account_window_stats,
             commands::codex::codex_local_access_query_request_logs,

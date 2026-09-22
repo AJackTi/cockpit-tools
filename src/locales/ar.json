@@ -2853,6 +2853,33 @@
         "placeholder": "البحث في الحسابات..."
       }
     },
+    "turnState": {
+      "checkAction": "فحص المخاطر",
+      "checkActionTitle": "يفحص x-codex-turn-state من الخادم للحسابات المحددة (كل حسابات OAuth عند عدم التحديد).",
+      "modalTitle": "فحص مخاطر الحساب",
+      "checkAll": "فحص الكل",
+      "checkOne": "فحص",
+      "checking": "جارٍ الفحص",
+      "checkingCount": "جارٍ فحص {{count}}",
+      "accountCount": "{{count}} حسابًا قابلًا للفحص",
+      "emptyAccounts": "لا توجد حسابات OAuth للفحص (حسابات مفتاح API لا تعيد state).",
+      "neverChecked": "لم يُفحص بعد",
+      "lastChecked": "آخر فحص {{time}}",
+      "checkFailed": "فشل الفحص: {{message}}",
+      "statusNormal": "طبيعي",
+      "statusAbnormal": "غير طبيعي",
+      "statusSuspected": "اشتباه في خطر",
+      "statusUnknown": "لم يُفحص",
+      "stateLength": "طول state {{length}}",
+      "stateMissing": "لا يوجد state",
+      "reasonAbnormal": "طول state غير طبيعي",
+      "reasonMissing": "الرد بدون state",
+      "openCheckTitle": "انقر لفتح فحص المخاطر",
+      "logHint": "x-codex-turn-state من الخادم: 312 يعني اشتباهًا في خطر، و292/332 طبيعي.",
+      "logSuspectedWithLength": "اشتباه في خطر · state {{length}}",
+      "reasonSuspected": "state يساوي 312",
+      "stateLengthAbnormal": "state {{length}} (غير طبيعي)"
+    },
     "wakeup": {
       "tab": "مهام الإيقاظ",
       "subtitle": "جدولة مهام إيقاظ Codex، واختبار مسار CLI، ومراجعة سجل التنفيذ.",
@@ -4025,8 +4052,6 @@
       "saveFailed": "فشل حفظ السرعة: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "هل تريد متابعة إضافة الحساب إلى خدمة API؟",
-      "accountRiskConfirmMessage": "قد تُعد خدمة API استخدامًا غير طبيعي، ما قد يؤدي إلى وسم الحساب أو خفض جودته؛ لا يُنصح بها حاليًا. هل تريد المتابعة؟",
       "navTitle": "خدمة Codex API",
       "title": "خدمة Codex API",
       "openPage": "فتح خدمة API",

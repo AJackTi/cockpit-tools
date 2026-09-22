@@ -2437,6 +2437,37 @@ export function CodexApiServiceView(props: CodexApiServiceViewProps) {
                     // 始终标出实际上游模型（与请求模型一致时也展示）；仅当日志未记录上游模型时回退为单行。
                     const { requestedModel, upstreamModel } =
                       resolveCodexApiServiceLogModelPair(event);
+                    // 上游 state 观测：只展示长度与分级，原文不入库也不展示。
+                    const turnStateClass = (event.turnStateClass || "")
+                      .trim()
+                      .toLowerCase();
+                    const turnStateLength =
+                      typeof event.turnStateLength === "number" &&
+                      event.turnStateLength > 0
+                        ? event.turnStateLength
+                        : null;
+                    // 只看 state：312 即疑似风控，292/332 正常，其它长度按异常展示。
+                    const turnStateSuspected = turnStateClass === "suspected";
+                    const turnStateLabel = turnStateSuspected
+                      ? turnStateLength !== null
+                        ? t("codex.turnState.logSuspectedWithLength", {
+                            length: turnStateLength,
+                            defaultValue: "疑似风控 · state {{length}}",
+                          })
+                        : t("codex.turnState.statusSuspected", "疑似风控")
+                      : turnStateClass === "missing"
+                        ? t("codex.turnState.stateMissing", "未返回 state")
+                        : turnStateLength !== null
+                          ? turnStateClass === "abnormal"
+                            ? t("codex.turnState.stateLengthAbnormal", {
+                                length: turnStateLength,
+                                defaultValue: "state {{length}}（异常）",
+                              })
+                            : t("codex.turnState.stateLength", {
+                                length: turnStateLength,
+                                defaultValue: "state {{length}}",
+                              })
+                          : "";
                     return (
                       <div
                         key={`${event.timestamp}-${event.requestId || event.apiKeyId}-${index}`}
@@ -2542,6 +2573,17 @@ export function CodexApiServiceView(props: CodexApiServiceViewProps) {
                                 status: event.httpStatus,
                                 defaultValue: "HTTP {{status}}",
                               })}
+                            </span>
+                          ) : null}
+                          {turnStateLabel ? (
+                            <span
+                              className={`codex-api-service-pill ${turnStateSuspected ? "error" : "muted"}`}
+                              title={t(
+                                "codex.turnState.logHint",
+                                "上游 x-codex-turn-state：312 视为疑似风控，292/332 正常。",
+                              )}
+                            >
+                              {turnStateLabel}
                             </span>
                           ) : null}
                           {event.errorCategory ? (

@@ -2806,6 +2806,33 @@
         "placeholder": "Tìm kiếm tài khoản..."
       }
     },
+    "turnState": {
+      "checkAction": "Kiểm tra rủi ro",
+      "checkActionTitle": "Kiểm tra x-codex-turn-state từ máy chủ cho các tài khoản đã chọn (tất cả tài khoản OAuth nếu chưa chọn).",
+      "modalTitle": "Kiểm tra rủi ro tài khoản",
+      "checkAll": "Kiểm tra tất cả",
+      "checkOne": "Kiểm tra",
+      "checking": "Đang kiểm tra",
+      "checkingCount": "Đang kiểm tra {{count}}",
+      "accountCount": "{{count}} tài khoản có thể kiểm tra",
+      "emptyAccounts": "Không có tài khoản OAuth để kiểm tra (tài khoản dùng API key không trả về state).",
+      "neverChecked": "Chưa kiểm tra",
+      "lastChecked": "Kiểm tra gần nhất {{time}}",
+      "checkFailed": "Kiểm tra thất bại: {{message}}",
+      "statusNormal": "Bình thường",
+      "statusAbnormal": "Bất thường",
+      "statusSuspected": "Nghi ngờ rủi ro",
+      "statusUnknown": "Chưa kiểm tra",
+      "stateLength": "độ dài state {{length}}",
+      "stateMissing": "Không có state",
+      "reasonAbnormal": "Độ dài state bất thường",
+      "reasonMissing": "Phản hồi không có state",
+      "openCheckTitle": "Nhấp để mở kiểm tra rủi ro",
+      "logHint": "x-codex-turn-state từ máy chủ: 312 là nghi ngờ rủi ro, 292/332 vẫn bình thường.",
+      "logSuspectedWithLength": "Nghi ngờ rủi ro · state {{length}}",
+      "reasonSuspected": "state là 312",
+      "stateLengthAbnormal": "state {{length}} (bất thường)"
+    },
     "wakeup": {
       "tab": "Tác vụ đánh thức",
       "subtitle": "Lên lịch tác vụ đánh thức Codex, kiểm tra đường dẫn CLI và xem lại lịch sử thực thi.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "Không thể lưu tốc độ: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "Vẫn thêm tài khoản vào dịch vụ API?",
-      "accountRiskConfirmMessage": "Dịch vụ API có thể bị coi là sử dụng bất thường, khiến tài khoản bị đánh dấu hoặc giảm chất lượng; hiện không khuyến nghị. Tiếp tục?",
       "navTitle": "Dịch vụ API Codex",
       "title": "Dịch vụ API Codex",
       "openPage": "Mở dịch vụ API",

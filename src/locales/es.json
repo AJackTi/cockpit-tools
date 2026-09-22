@@ -2806,6 +2806,33 @@
         "placeholder": "Buscar cuentas..."
       }
     },
+    "turnState": {
+      "checkAction": "Comprobación de riesgo",
+      "checkActionTitle": "Comprueba el x-codex-turn-state del servidor para las cuentas seleccionadas (todas las cuentas OAuth si no hay selección).",
+      "modalTitle": "Comprobación de riesgo de cuentas",
+      "checkAll": "Comprobar todo",
+      "checkOne": "Comprobar",
+      "checking": "Comprobando",
+      "checkingCount": "Comprobando {{count}}",
+      "accountCount": "{{count}} cuentas comprobables",
+      "emptyAccounts": "No hay cuentas OAuth para comprobar (las cuentas con clave de API no devuelven state).",
+      "neverChecked": "Sin comprobar",
+      "lastChecked": "Última comprobación {{time}}",
+      "checkFailed": "Error de comprobación: {{message}}",
+      "statusNormal": "Correcto",
+      "statusAbnormal": "Anómalo",
+      "statusSuspected": "Posible riesgo",
+      "statusUnknown": "Sin comprobar",
+      "stateLength": "longitud state {{length}}",
+      "stateMissing": "Sin state",
+      "reasonAbnormal": "Longitud de state anómala",
+      "reasonMissing": "La respuesta no incluye state",
+      "openCheckTitle": "Haz clic para abrir la comprobación de riesgo",
+      "logHint": "x-codex-turn-state del servidor: 312 cuenta como posible riesgo; 292/332 siguen siendo normales.",
+      "logSuspectedWithLength": "Posible riesgo · state {{length}}",
+      "reasonSuspected": "state es 312",
+      "stateLengthAbnormal": "state {{length}} (anómalo)"
+    },
     "wakeup": {
       "tab": "Tareas de activación",
       "subtitle": "Programa tareas de activación de Codex, prueba la ruta del CLI y revisa el historial de ejecución.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "No se pudo guardar la velocidad: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "¿Añadir la cuenta al servicio API de todos modos?",
-      "accountRiskConfirmMessage": "El servicio API puede considerarse un uso anómalo y provocar que la cuenta se marque o pierda calidad; por ahora no se recomienda. ¿Continuar?",
       "navTitle": "Servicio API de Codex",
       "title": "Servicio API de Codex",
       "openPage": "Abrir servicio API",

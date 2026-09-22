@@ -2937,6 +2937,33 @@
         "placeholder": "搜尋帳號..."
       }
     },
+    "turnState": {
+      "checkAction": "風控檢測",
+      "checkActionTitle": "檢測所選帳號（未選擇時檢測全部 OAuth 帳號）的上游 x-codex-turn-state。",
+      "modalTitle": "帳號風控檢測",
+      "checkAll": "檢測全部",
+      "checkOne": "檢測",
+      "checking": "檢測中",
+      "checkingCount": "檢測中 {{count}}",
+      "accountCount": "{{count}} 個可檢測帳號",
+      "emptyAccounts": "沒有可檢測的 OAuth 帳號（API Key 帳號沒有上游 state）。",
+      "neverChecked": "尚未檢測",
+      "lastChecked": "最近檢測 {{time}}",
+      "checkFailed": "檢測失敗：{{message}}",
+      "statusNormal": "正常",
+      "statusAbnormal": "異常",
+      "statusSuspected": "疑似風控",
+      "statusUnknown": "未檢測",
+      "stateLength": "state 長度 {{length}}",
+      "stateMissing": "未回傳 state",
+      "reasonAbnormal": "state 長度異常",
+      "reasonMissing": "回應未回傳 state",
+      "openCheckTitle": "點擊開啟風控檢測",
+      "logHint": "上游 x-codex-turn-state：312 視為疑似風控，292/332 正常。",
+      "logSuspectedWithLength": "疑似風控 · state {{length}}",
+      "reasonSuspected": "state 為 312",
+      "stateLengthAbnormal": "state {{length}}（異常）"
+    },
     "wakeup": {
       "tab": "喚醒任務",
       "subtitle": "安排 Codex 喚醒任務、測試 CLI 路徑並查看執行歷史。",
@@ -3978,8 +4005,6 @@
       "saveFailed": "儲存速度失敗：{{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "仍要將帳號加入 API 服務？",
-      "accountRiskConfirmMessage": "目前 API 服務可能被官方判定為異常使用，帳號可能因此被標記或降智；近期不建議使用。確認繼續加入嗎？",
       "navTitle": "Codex API 服務",
       "title": "Codex API 服務",
       "openPage": "進入 API 服務",

@@ -154,6 +154,14 @@ struct SidecarUsageEvent {
     #[serde(default)]
     #[serde(alias = "reasoning_effort")]
     reasoning_effort: Option<String>,
+    /// 上游响应头 `x-codex-turn-state` 的长度（只保留长度，不保存原文）。
+    #[serde(default)]
+    #[serde(alias = "turn_state_length")]
+    turn_state_length: Option<i64>,
+    /// state 长度分级：normal / renew / abnormal / missing。
+    #[serde(default)]
+    #[serde(alias = "turn_state_class")]
+    turn_state_class: Option<String>,
     #[serde(default)]
     success: bool,
     #[serde(default)]

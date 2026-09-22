@@ -11,10 +11,6 @@ import { buildCodexAccountPresentation } from "../presentation/platformAccountPr
 import { recoverCodexBatchImportStartFromPreview } from "../utils/codexBatchImportQueue";
 import { CodexSwitchAccountError } from "../utils/codexSwitchAuthFailure";
 import { requestCodexOpenAddAccount } from "../utils/codexAddAccountRequest";
-import {
-  confirmApiServiceAccountAdd,
-  shouldConfirmApiServiceRiskForAccountType,
-} from "../utils/apiServiceRiskConfirm";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -1916,18 +1912,6 @@ export function useCodexAccountsAccessController(context: CodexAccountsAccessCon
           t("codex.batchImport.noSelection", "请先选择要导入的账号"),
         );
         return;
-      }
-      if (options.addToApiService) {
-        // 只有普通 OAuth 账号需要风险确认；API Key / DeepSeek 等其他类型直接加入。
-        const selectedIdSet = new Set(selectedSelectableIds);
-        const hasOrdinaryAccount = (batchImportPreview?.items ?? []).some(
-          (item) =>
-            selectedIdSet.has(item.itemId) &&
-            shouldConfirmApiServiceRiskForAccountType(item.accountType),
-        );
-        if (hasOrdinaryAccount && !(await confirmApiServiceAccountAdd(t))) {
-          return;
-        }
       }
       setBatchImportBusy(true);
       setBatchImportError(null);

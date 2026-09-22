@@ -455,6 +455,9 @@ type usagePayload struct {
 	ErrorCategory    string       `json:"errorCategory,omitempty"`
 	ErrorMessage     string       `json:"errorMessage,omitempty"`
 	LatencyMS        int64        `json:"latencyMs,omitempty"`
+	// TurnStateLength/TurnStateClass 来自上游响应头的旁路观测；state 原文不保存。
+	TurnStateLength *int   `json:"turnStateLength,omitempty"`
+	TurnStateClass  string `json:"turnStateClass,omitempty"`
 	Usage            usageDetails `json:"usage"`
 	RequestedAtMS    int64        `json:"requestedAtMs,omitempty"`
 }

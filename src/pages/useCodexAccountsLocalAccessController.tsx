@@ -4,10 +4,6 @@ import { RefreshCw, X, CircleAlert, Info, Link2 } from "lucide-react";
 import * as codexService from "../services/codexService";
 import * as codexLocalAccessService from "../services/codexLocalAccessService";
 import { presentWindowsOperationError } from "../utils/windowsOperationDialog";
-import {
-  confirmApiServiceAccountAdd,
-  shouldConfirmApiServiceRiskForAccount,
-} from "../utils/apiServiceRiskConfirm";
 import { assignAccountsToCodexGroup, deleteCodexGroup, removeAccountsFromCodexGroup } from "../services/codexAccountGroupService";
 import { formatCodexLoginProvider, getCodexAuthMetadata, getCodexPlanFilterKey, getCodexSubscriptionPresentationForAccount, isCodexApiKeyAccount, isCodexNewApiAccount, isCodexTeamLikePlan, type CodexQuotaErrorInfo } from "../types/codex";
 import { canAddCodexAccountToLocalAccess, filterCodexLocalAccessAccountIds } from "../utils/codexLocalAccessAccounts";
@@ -1116,13 +1112,6 @@ export function useCodexAccountsLocalAccessController(context: Pick<ReturnType<t
     const handleAddLocalAccessAccount = useCallback(
       async (accountId: string) => {
         if (addingLocalAccessAccountId) return;
-        const accountForRisk = accounts.find((item) => item.id === accountId);
-        if (
-          shouldConfirmApiServiceRiskForAccount(accountForRisk) &&
-          !(await confirmApiServiceAccountAdd(t))
-        ) {
-          return;
-        }
         setAddingLocalAccessAccountId(accountId);
         try {
           const result =

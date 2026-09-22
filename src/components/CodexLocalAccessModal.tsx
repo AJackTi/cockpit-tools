@@ -31,10 +31,6 @@ import {
   type GrokAccount,
 } from "../types/grok";
 import { listGrokAccounts } from "../services/grokService";
-import {
-  confirmApiServiceAccountAdd,
-  shouldConfirmApiServiceRiskForAccount,
-} from "../utils/apiServiceRiskConfirm";
 import type { CodexAccountGroup } from "../services/codexAccountGroupService";
 import type {
   CodexLocalAccessAddressKind,
@@ -1718,13 +1714,6 @@ export function CodexLocalAccessModal({
       });
       return;
     }
-    // 只有普通 OAuth 账号需要风险确认，API Key / Agent Identity / DeepSeek 等不再提示。
-    const needsRiskConfirm = codexRows.some((account) =>
-      shouldConfirmApiServiceRiskForAccount(account),
-    );
-    if (needsRiskConfirm && !(await confirmApiServiceAccountAdd(t))) {
-      return;
-    }
     setMembersDraftDirty(true);
     setSelected((prev) => {
       const next = new Set(prev);
@@ -1786,13 +1775,6 @@ export function CodexLocalAccessModal({
       !isCodexLocalAccessEligibleAccount(account, restrictFreeAccounts) &&
       !selected.has(accountId);
     if (isSelectionBlocked) {
-      return;
-    }
-    if (
-      !selected.has(accountId) &&
-      shouldConfirmApiServiceRiskForAccount(account) &&
-      !(await confirmApiServiceAccountAdd(t))
-    ) {
       return;
     }
     setMembersDraftDirty(true);

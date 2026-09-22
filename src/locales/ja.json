@@ -2806,6 +2806,33 @@
       "hint": "API Key のクレジットは OpenAI Usage ページで確認してください。",
       "openFailed": "使用量ページを開けませんでした: {{error}}"
     },
+    "turnState": {
+      "checkAction": "リスク検査",
+      "checkActionTitle": "選択したアカウント（未選択時はすべての OAuth アカウント）の上流 x-codex-turn-state を検査します。",
+      "modalTitle": "アカウントのリスク検査",
+      "checkAll": "すべて検査",
+      "checkOne": "検査",
+      "checking": "検査中",
+      "checkingCount": "{{count}} 件を検査中",
+      "accountCount": "検査可能なアカウント {{count}} 件",
+      "emptyAccounts": "検査できる OAuth アカウントがありません（API キーアカウントは上流 state を返しません）。",
+      "neverChecked": "未検査",
+      "lastChecked": "最終検査 {{time}}",
+      "checkFailed": "検査に失敗しました：{{message}}",
+      "statusNormal": "正常",
+      "statusAbnormal": "異常",
+      "statusSuspected": "規制の疑い",
+      "statusUnknown": "未検査",
+      "stateLength": "state 長さ {{length}}",
+      "stateMissing": "state なし",
+      "reasonAbnormal": "state の長さが異常",
+      "reasonMissing": "応答に state がない",
+      "openCheckTitle": "クリックしてリスク検査を開く",
+      "logHint": "上流 x-codex-turn-state：312 は規制の疑い、292/332 は正常です。",
+      "logSuspectedWithLength": "規制の疑い · state {{length}}",
+      "reasonSuspected": "state が 312",
+      "stateLengthAbnormal": "state {{length}}（異常）"
+    },
     "wakeup": {
       "tab": "ウェイクアップタスク",
       "subtitle": "Codex のウェイクアップタスクをスケジュールし、CLI パスをテストして、実行履歴を確認します。",
@@ -3978,8 +4005,6 @@
       "saveFailed": "速度の保存に失敗しました: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "アカウントを API サービスに追加しますか？",
-      "accountRiskConfirmMessage": "現在 API サービスは異常な利用と判定され、アカウントがマークされたり能力が制限されたりする可能性があります。最近は推奨していません。続行しますか？",
       "navTitle": "Codex API サービス",
       "title": "Codex API サービス",
       "openPage": "API サービスを開く",

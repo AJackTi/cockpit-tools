@@ -1965,7 +1965,10 @@ pub(crate) fn provider_injection_model_payload(account: &CodexAccount) -> serde_
                 .api_model_vision_support
                 .get(&key)
                 .copied()
-                .unwrap_or(account.api_supports_vision);
+                .unwrap_or_else(|| {
+                    // gpt-5.5 及以上默认支持识图；其它模型仍按账号级开关。
+                    account.api_supports_vision || model_defaults_to_vision_input(model)
+                });
             serde_json::json!({
                 "id": model,
                 "name": model,

@@ -1385,6 +1385,153 @@ fn native_provider_for_provider_account(account: &CodexAccount) -> Option<String
     None
 }
 
+/// 供应商记录里的识图能力（`codex_model_providers.json`）。
+///
+/// v1.3.49 之前识图开关挂在供应商上，之后收敛为逐模型能力；升级后的账号记录
+/// 可能还没有同步到逐模型表，网关配置因此把支持图片的模型当成 text-only 并丢图。
+/// 这里以供应商记录作为兜底数据源，避免 Provider Gateway 静默删除 `input_image`。
+#[derive(Debug, Clone, Default)]
+struct CodexModelProviderVisionRecord {
+    supports_vision: bool,
+    /// key 为小写模型 ID。
+    model_capabilities: HashMap<String, bool>,
+}
+
+struct CodexModelProviderVisionEntry {
+    id: String,
+    /// 规范化后的 Base URL（去掉末尾斜杠并转小写）。
+    base_url: Option<String>,
+    record: CodexModelProviderVisionRecord,
+}
+
+const CODEX_MODEL_PROVIDERS_FILE: &str = "codex_model_providers.json";
+
+fn normalize_provider_vision_base_url(value: &str) -> Option<String> {
+    let trimmed = value.trim().trim_end_matches('/').to_ascii_lowercase();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+fn load_codex_model_provider_vision_entries() -> Vec<CodexModelProviderVisionEntry> {
+    let Ok(path) = account::get_data_dir().map(|dir| dir.join(CODEX_MODEL_PROVIDERS_FILE)) else {
+        return Vec::new();
+    };
+    let Ok(content) = fs::read_to_string(&path) else {
+        return Vec::new();
+    };
+    let Ok(value) = serde_json::from_str::<Value>(&content) else {
+        return Vec::new();
+    };
+    let Some(items) = value.as_array() else {
+        return Vec::new();
+    };
+    items
+        .iter()
+        .filter_map(|item| {
+            let id = item
+                .get("id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .unwrap_or_default()
+                .to_string();
+            let base_url = item
+                .get("baseUrl")
+                .and_then(Value::as_str)
+                .and_then(normalize_provider_vision_base_url);
+            if id.is_empty() && base_url.is_none() {
+                return None;
+            }
+            let supports_vision = item
+                .get("supportsVision")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let mut model_capabilities = HashMap::new();
+            if let Some(map) = item.get("modelCapabilities").and_then(Value::as_object) {
+                for (model, capability) in map {
+                    let key = model.trim().to_ascii_lowercase();
+                    if key.is_empty() {
+                        continue;
+                    }
+                    if let Some(flag) = capability.get("supportsVision").and_then(Value::as_bool) {
+                        model_capabilities.insert(key, flag);
+                    }
+                }
+            }
+            Some(CodexModelProviderVisionEntry {
+                id,
+                base_url,
+                record: CodexModelProviderVisionRecord {
+                    supports_vision,
+                    model_capabilities,
+                },
+            })
+        })
+        .collect()
+}
+
+fn codex_model_provider_vision_record_for_account<'a>(
+    account: &CodexAccount,
+    entries: &'a [CodexModelProviderVisionEntry],
+) -> Option<&'a CodexModelProviderVisionRecord> {
+    let provider_id = account
+        .api_provider_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let account_base_url = account
+        .api_base_url
+        .as_deref()
+        .and_then(normalize_provider_vision_base_url);
+    entries
+        .iter()
+        .find(|entry| {
+            let id_matches = provider_id.is_some_and(|value| value == entry.id);
+            let base_url_matches = account_base_url
+                .as_deref()
+                .zip(entry.base_url.as_deref())
+                .is_some_and(|(account_url, provider_url)| account_url == provider_url);
+            id_matches || base_url_matches
+        })
+        .map(|entry| &entry.record)
+}
+
+/// 用供应商记录的识图能力补齐逐模型表。
+///
+/// 优先级：供应商逐模型显式值 → 账号逐模型显式值 → 供应商级开关 → 账号级开关。
+/// 返回网关级 `supportsVision`（作为未被逐模型表覆盖时的兜底）。
+fn merge_provider_vision_capabilities(
+    model_capabilities: &mut HashMap<String, CodexLocalAccessProviderGatewayModelCapability>,
+    account: &CodexAccount,
+    provider: Option<&CodexModelProviderVisionRecord>,
+    models: &[String],
+) -> bool {
+    let provider_flag = provider.is_some_and(|record| record.supports_vision);
+    let gateway_supports_vision = provider_flag || account.api_supports_vision;
+    for model in models {
+        let key = model.trim().to_ascii_lowercase();
+        if key.is_empty() {
+            continue;
+        }
+        let provider_value = provider.and_then(|record| record.model_capabilities.get(&key).copied());
+        let account_value = model_capabilities.get(&key).map(|capability| capability.supports_vision);
+        let effective = provider_value
+            .or(account_value)
+            .unwrap_or_else(|| {
+                gateway_supports_vision || codex_account::model_defaults_to_vision_input(model)
+            });
+        model_capabilities.insert(
+            key,
+            CodexLocalAccessProviderGatewayModelCapability {
+                supports_vision: effective,
+            },
+        );
+    }
+    gateway_supports_vision
+}
+
 fn provider_gateway_for_account(
     account: &CodexAccount,
 ) -> Result<CodexLocalAccessProviderGateway, String> {
@@ -1469,6 +1616,17 @@ fn provider_gateway_for_account(
             }
         }
     }
+    // 供应商记录兜底：旧版本的供应商级/逐模型识图配置可能还没同步进账号记录，
+    // 直接按供应商数据补齐逐模型表，避免 sidecar 判定 text-only 后删除图片。
+    let provider_vision_entries = load_codex_model_provider_vision_entries();
+    let provider_vision =
+        codex_model_provider_vision_record_for_account(account, &provider_vision_entries);
+    let gateway_supports_vision = merge_provider_vision_capabilities(
+        &mut model_capabilities,
+        account,
+        provider_vision,
+        &upstream_models,
+    );
     // Provider catalogs expose shell aliases to Codex while requests are
     // rewritten to the upstream model. Keep the capability on both names so
     // the /models response and request guard agree for mapped DeepSeek models.
@@ -1488,7 +1646,7 @@ fn provider_gateway_for_account(
         upstream_model: upstream_models.first().cloned().unwrap_or_default(),
         upstream_models,
         wire_api: Some(provider_gateway_wire_api_for_account(account)),
-        supports_vision: account.api_supports_vision,
+        supports_vision: gateway_supports_vision,
         model_capabilities,
         vision_routing_model: account
             .api_vision_routing_model

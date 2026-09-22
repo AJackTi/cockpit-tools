@@ -2806,6 +2806,33 @@
         "placeholder": "계정 검색..."
       }
     },
+    "turnState": {
+      "checkAction": "리스크 검사",
+      "checkActionTitle": "선택한 계정(선택하지 않으면 모든 OAuth 계정)의 업스트림 x-codex-turn-state를 검사합니다.",
+      "modalTitle": "계정 리스크 검사",
+      "checkAll": "모두 검사",
+      "checkOne": "검사",
+      "checking": "검사 중",
+      "checkingCount": "{{count}}개 검사 중",
+      "accountCount": "검사 가능한 계정 {{count}}개",
+      "emptyAccounts": "검사할 OAuth 계정이 없습니다(API 키 계정은 업스트림 state를 반환하지 않습니다).",
+      "neverChecked": "검사 전",
+      "lastChecked": "최근 검사 {{time}}",
+      "checkFailed": "검사 실패: {{message}}",
+      "statusNormal": "정상",
+      "statusAbnormal": "비정상",
+      "statusSuspected": "리스크 의심",
+      "statusUnknown": "미검사",
+      "stateLength": "state 길이 {{length}}",
+      "stateMissing": "state 없음",
+      "reasonAbnormal": "state 길이 비정상",
+      "reasonMissing": "응답에 state 없음",
+      "openCheckTitle": "클릭하여 리스크 검사 열기",
+      "logHint": "업스트림 x-codex-turn-state: 312는 리스크 의심, 292/332는 정상입니다.",
+      "logSuspectedWithLength": "리스크 의심 · state {{length}}",
+      "reasonSuspected": "state가 312",
+      "stateLengthAbnormal": "state {{length}} (비정상)"
+    },
     "wakeup": {
       "tab": "깨우기 작업",
       "subtitle": "Codex 깨우기 작업을 예약하고, CLI 경로를 테스트하고, 실행 기록을 확인합니다.",
@@ -3978,8 +4005,6 @@
       "saveFailed": "속도 저장 실패: {{error}}"
     },
     "apiService": {
-      "accountRiskConfirmTitle": "계정을 API 서비스에 추가할까요?",
-      "accountRiskConfirmMessage": "현재 API 서비스는 비정상 사용으로 판단되어 계정이 표시되거나 성능이 제한될 수 있습니다. 최근에는 권장하지 않습니다. 계속할까요?",
       "navTitle": "Codex API 서비스",
       "title": "Codex API 서비스",
       "openPage": "API 서비스 열기",
