@@ -1264,7 +1264,25 @@ export function CodexLaunchPreviewModal({
     }
     setContextConfigError(null);
     setContextConfigSaving(true);
+    const session = configSession.current;
+    configWritePending.current = true;
+    setCheckingConfig(true);
     try {
+      // 与「保存」一致：写入前重读一次配置，外部已改动时拒绝应用，
+      // 避免「应用上下文」绕过校验、静默覆盖别处的修改。
+      const latest = await loadCodexLaunchPreviewConfig(
+        instanceId,
+        mode === "apiService",
+      );
+      if (session !== configSession.current) return;
+      if (
+        codexLaunchPreviewQuickConfigKey(latest) !==
+        codexLaunchPreviewQuickConfigKey(loadedConfig)
+      ) {
+        setConfigLoadError("CODEX_LAUNCH_PREVIEW_CONFIG_CHANGED");
+        return;
+      }
+      setCheckingConfig(false);
       const saved = await saveCodexInstanceQuickConfig(
         instanceId,
         contextOverrideEnabled ? contextWindow : undefined,
@@ -1281,9 +1299,14 @@ export function CodexLaunchPreviewModal({
         t("codex.modelProviders.quickConfig.saveSuccess", "当前 Codex 配置已保存"),
       );
     } catch (saveError) {
+      if (session !== configSession.current) return;
       setContextConfigError(String(saveError).replace(/^Error:\s*/, ""));
     } finally {
-      setContextConfigSaving(false);
+      if (session === configSession.current) {
+        configWritePending.current = false;
+        setCheckingConfig(false);
+        setContextConfigSaving(false);
+      }
     }
   }, [
     applyLoadedConfig,
@@ -1295,6 +1318,8 @@ export function CodexLaunchPreviewModal({
     contextWindowInput,
     defaultModelId,
     instanceId,
+    loadedConfig,
+    mode,
     models,
   ]);
 
