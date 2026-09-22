@@ -6,8 +6,8 @@ import { isVerboseCodexQuotaErrorMessage, summarizeCodexQuotaErrorMessage } from
 import { CodexQuotaMiniRows } from "../components/codex/CodexQuotaMiniRows";
 import { CodexTeamQuotaHistory } from "../components/codex/CodexTeamQuotaHistory";
 import { isCodexClientReauthNoticeOnly, isCodexRefreshTokenNoticeOnly, isCodexRefreshTokenReusedAccount, isCodexServerRevokedReauth } from "../utils/codexSwitchAuthFailure";
-import { DEFAULT_CODEX_INSTANCE_ID } from "../components/codex/CodexLaunchPreviewModal";
-import { isDeepSeekAccount, isCodexTokenPlanAccount, shouldShowCodexApiKeyUsagePanel } from "../utils/codexDeepSeekAccess";
+import { CODEX_LAUNCH_PREVIEW_API_SERVICE_CARD_KEY } from "../utils/codexLaunchPreviewInstancePreference";
+ import { isDeepSeekAccount, isCodexTokenPlanAccount, shouldShowCodexApiKeyUsagePanel } from "../utils/codexDeepSeekAccess";
 import { CodexSpeedSelect } from "../components/codex/CodexSpeedSelect";
 import { SingleSelectDropdown } from "../components/SingleSelectDropdown";
 import { CODEX_API_SERVICE_BIND_ID } from "../types/instance";
@@ -152,9 +152,9 @@ export function useCodexAccountsRenderers(context: Pick<ReturnType<typeof useCod
   | "setEditingApiKeyNameValue"
   | "setExternalImportSyncError"
   | "setGroupQuickAddGroupId"
-  | "setImportApiServiceGuideCount"
-  | "setLaunchPreviewInstanceId"
-  | "setLocalAccessDetailsExpanded"
+   | "setImportApiServiceGuideCount"
+   | "restoreLaunchPreviewInstanceId"
+   | "setLocalAccessDetailsExpanded"
   | "setLocalAccessKeyVisible"
   | "setLocalAccessLaunchPreviewOpen"
   | "setMessage"
@@ -297,10 +297,10 @@ export function useCodexAccountsRenderers(context: Pick<ReturnType<typeof useCod
     setCockpitApiPanelAccountId,
     setEditingApiKeyNameValue,
     setExternalImportSyncError,
-    setGroupQuickAddGroupId,
-    setImportApiServiceGuideCount,
-    setLaunchPreviewInstanceId,
-    setLocalAccessDetailsExpanded,
+     setGroupQuickAddGroupId,
+     setImportApiServiceGuideCount,
+     restoreLaunchPreviewInstanceId,
+     setLocalAccessDetailsExpanded,
     setLocalAccessKeyVisible,
     setLocalAccessLaunchPreviewOpen,
     setMessage,
@@ -1826,7 +1826,9 @@ export function useCodexAccountsRenderers(context: Pick<ReturnType<typeof useCod
                         className="card-action-btn success"
                         onClick={() => {
                           setImportApiServiceGuideCount(null);
-                          setLaunchPreviewInstanceId(DEFAULT_CODEX_INSTANCE_ID);
+                          restoreLaunchPreviewInstanceId(
+                            CODEX_LAUNCH_PREVIEW_API_SERVICE_CARD_KEY,
+                          );
                           setLocalAccessLaunchPreviewOpen(true);
                         }}
                         title={t(

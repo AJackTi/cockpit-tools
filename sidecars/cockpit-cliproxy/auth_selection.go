@@ -1510,6 +1510,16 @@ func (p *usagePlugin) HandleUsage(ctx context.Context, record coreusage.Record) 
 	if alias == "" {
 		alias = strings.TrimSpace(requestModel)
 	}
+	// 路由/别名改写后 record.Model 只保留上游模型；客户端原始请求模型单独取自
+	// 宿主请求上下文，两者都上报，供 API 服务明细展示「请求模型 → 上游模型」。
+	requestedModel := strings.TrimSpace(requestModel)
+	if requestedModel == "" {
+		requestedModel = alias
+	}
+	upstreamModel := strings.TrimSpace(record.Model)
+	if upstreamModel == "" {
+		upstreamModel = model
+	}
 	status := record.Fail.StatusCode
 	success := !record.Failed
 	payload := usagePayload{
@@ -1518,6 +1528,8 @@ func (p *usagePlugin) HandleUsage(ctx context.Context, record coreusage.Record) 
 		Provider:         record.Provider,
 		Model:            model,
 		Alias:            alias,
+		RequestedModel:   requestedModel,
+		UpstreamModel:    upstreamModel,
 		AccountID:        stringFromAccount(account, "id"),
 		AccountEmail:     stringFromAccount(account, "email"),
 		AuthID:           record.AuthID,

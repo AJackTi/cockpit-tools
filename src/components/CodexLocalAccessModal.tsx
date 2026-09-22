@@ -31,6 +31,10 @@ import {
   type GrokAccount,
 } from "../types/grok";
 import { listGrokAccounts } from "../services/grokService";
+import {
+  confirmApiServiceAccountAdd,
+  shouldConfirmApiServiceRiskForAccount,
+} from "../utils/apiServiceRiskConfirm";
 import type { CodexAccountGroup } from "../services/codexAccountGroupService";
 import type {
   CodexLocalAccessAddressKind,
@@ -79,8 +83,9 @@ import {
   type MultiSelectFilterOption,
 } from "./MultiSelectFilterDropdown";
 import { SingleSelectDropdown } from "./SingleSelectDropdown";
-import { CodexImageModelConfig } from "./CodexImageModelConfig";
-import { buildGrokMemberRowAccounts, CodexGrokBuildQuotaChip, isGrokMemberRowId } from "./codex/codexGrokMemberRows";
+import { CodexImageModelSelect } from "./CodexImageModelConfig";
+import { CodexImageForwardConfig } from "./CodexImageForwardConfig";
+import { buildGrokMemberRowAccounts, CodexGrokBuildQuotaChip, selectCodexLocalAccessMemberRows } from "./codex/codexGrokMemberRows";
 import { PaginationControls } from "./PaginationControls";
 import { CodexStatsRangePicker } from "./CodexStatsRangePicker";
 import { queryCodexLocalAccessStats } from "../services/codexLocalAccessService";
@@ -169,6 +174,10 @@ interface CodexLocalAccessModalProps {
   ) => Promise<unknown> | unknown;
   onUpdateDebugLogs: (debugLogs: boolean) => Promise<unknown> | unknown;
   onUpdateImageGenerationModel: (model: string) => Promise<unknown> | unknown;
+  /** 保存 API 服务的生图转发账号池（生图请求交给这些 OAuth 账号）。 */
+  onUpdateImageGenerationAccounts: (
+    accountIds: string[],
+  ) => Promise<unknown> | unknown;
   onRotateApiKey: () => Promise<unknown> | unknown;
   onRestartSidecar: () => Promise<unknown> | unknown;
   onKillPort: () => Promise<unknown> | unknown;
@@ -372,6 +381,7 @@ export function CodexLocalAccessModal({
   onUpdateUpstreamProxyConfig,
   onUpdateDebugLogs,
   onUpdateImageGenerationModel,
+  onUpdateImageGenerationAccounts,
   onRotateApiKey,
   onRestartSidecar,
   onKillPort,
@@ -521,7 +531,8 @@ export function CodexLocalAccessModal({
     });
   const testDialogBusy = testDialogRunning || testing;
   const actionBusy = saving || testing || starting || portCleanupBusy;
-  const membersInteractionDisabled = actionBusy || !accountsLoaded;
+  const membersInteractionDisabled =
+    actionBusy || !accountsLoaded || Boolean(grokMemberBusyId);
   const summaryStats = useMemo(
     () => [
       {
@@ -966,7 +977,7 @@ export function CodexLocalAccessModal({
    * 供应商账号，选中的始终是真实账号 ID。
    */
   const grokMemberRowAccounts = useMemo(() => {
-    if (!onAddGrokMember || !showGrokPlatform) {
+    if (mode !== "members" || !onAddGrokMember || !showGrokPlatform) {
       return [] as CodexAccount[];
     }
     const { requireValidAccounts, selectedTypes } =
@@ -985,6 +996,7 @@ export function CodexLocalAccessModal({
     memberGroupFilter,
     memberSearchQuery,
     memberTagFilter,
+    mode,
     onAddGrokMember,
     showGrokPlatform,
   ]);
@@ -1009,7 +1021,7 @@ export function CodexLocalAccessModal({
 
   const visibleAccounts = useMemo(() => {
     if (memberView) {
-      return [...memberView.accounts, ...grokMemberRowAccounts];
+      return memberView.accounts;
     }
 
     const queryText = query.trim().toLowerCase();
@@ -1029,7 +1041,7 @@ export function CodexLocalAccessModal({
     const { requireValidAccounts, selectedTypes } =
       splitValidityFilterValues(filterTypes);
 
-    return [...sorted.filter((account) => {
+    return sorted.filter((account) => {
       const presentation = buildCodexAccountPresentation(account, t);
       const displayName = presentation.displayName.toLowerCase();
       const groupNames = (groupNameByAccountId.get(account.id) ?? [])
@@ -1079,7 +1091,7 @@ export function CodexLocalAccessModal({
       }
 
       return true;
-    }), ...grokMemberRowAccounts];
+    });
   }, [
     filterTypes,
     groupFilter,
@@ -1092,42 +1104,16 @@ export function CodexLocalAccessModal({
     tagFilter,
   ]);
 
-  const visibleSelectableAccounts = useMemo(
-    () =>
-      (showCodexPlatform ? visibleAccounts : []).filter((account) => {
-        // 已绑定的供应商账号由同名的 Grok 平台行展示，避免同一账号出现两行；
-        // Grok 平台行本身（grok: 前缀）必须保留。
-        if (
-          onAddGrokMember &&
-          !isGrokMemberRowId(account.id) &&
-          account.upstream_grok_account_id?.trim()
-        ) {
-          return false;
-        }
-        const ineligibleReason = getCodexLocalAccessAccountIneligibleReason(
-          account,
-          restrictFreeAccounts,
-        );
-        // Keep unavailable accounts visible so users know why they cannot join.
-        if (
-          ineligibleReason === "pending_oauth" ||
-          ineligibleReason === "web_session_quota_only"
-        ) {
-          return true;
-        }
-        if (isCodexLocalAccessEligibleAccount(account, restrictFreeAccounts)) {
-          return true;
-        }
-        return selected.has(account.id);
-      }),
-    [
-      onAddGrokMember,
-      restrictFreeAccounts,
-      selected,
-      showCodexPlatform,
-      visibleAccounts,
-    ],
-  );
+  const visibleSelectableAccounts = selectCodexLocalAccessMemberRows({
+    codexAccounts: visibleAccounts,
+    grokRows: grokMemberRowAccounts,
+    grokAccounts: grokMemberCandidates,
+    manageGrok: Boolean(onAddGrokMember),
+    showCodexPlatform,
+    showGrokPlatform,
+    restrictFreeAccounts,
+    selected,
+  });
   const memberPagination = usePagination({
     items: visibleSelectableAccounts,
     storageKey: buildPaginationPageSizeStorageKey("CodexLocalAccessMembers"),
@@ -1702,11 +1688,10 @@ export function CodexLocalAccessModal({
     }
   };
 
-  const toggleSelectAllVisible = () => {
+  const toggleSelectAllVisible = async () => {
     if (membersInteractionDisabled || visibleEnabledAccounts.length === 0) {
       return;
     }
-    setMembersDraftDirty(true);
     const codexRows: CodexAccount[] = [];
     const grokRows: GrokAccount[] = [];
     for (const account of visibleEnabledAccounts) {
@@ -1718,6 +1703,7 @@ export function CodexLocalAccessModal({
       }
     }
     if (allVisibleSelected) {
+      setMembersDraftDirty(true);
       setSelected((prev) => {
         const next = new Set(prev);
         codexRows.forEach((account) => next.delete(account.id));
@@ -1732,6 +1718,14 @@ export function CodexLocalAccessModal({
       });
       return;
     }
+    // 只有普通 OAuth 账号需要风险确认，API Key / Agent Identity / DeepSeek 等不再提示。
+    const needsRiskConfirm = codexRows.some((account) =>
+      shouldConfirmApiServiceRiskForAccount(account),
+    );
+    if (needsRiskConfirm && !(await confirmApiServiceAccountAdd(t))) {
+      return;
+    }
+    setMembersDraftDirty(true);
     setSelected((prev) => {
       const next = new Set(prev);
       codexRows.forEach((account) => next.add(account.id));
@@ -1784,7 +1778,7 @@ export function CodexLocalAccessModal({
     setSessionAffinity(true);
   };
 
-  const toggleSelect = (accountId: string) => {
+  const toggleSelect = async (accountId: string) => {
     if (membersInteractionDisabled) return;
     const account = localAccessAccountById.get(accountId);
     if (!account) return;
@@ -1792,6 +1786,13 @@ export function CodexLocalAccessModal({
       !isCodexLocalAccessEligibleAccount(account, restrictFreeAccounts) &&
       !selected.has(accountId);
     if (isSelectionBlocked) {
+      return;
+    }
+    if (
+      !selected.has(accountId) &&
+      shouldConfirmApiServiceRiskForAccount(account) &&
+      !(await confirmApiServiceAccountAdd(t))
+    ) {
       return;
     }
     setMembersDraftDirty(true);
@@ -3119,10 +3120,19 @@ export function CodexLocalAccessModal({
                       ) : null}
 
                       {collection ? (
-                        <CodexImageModelConfig
-                          model={collection.imageGenerationModel}
+                        <CodexImageForwardConfig
+                          accounts={accounts}
+                          accountIds={collection.imageGenerationAccountIds}
                           disabled={saving || testing || starting}
-                          onSave={onUpdateImageGenerationModel}
+                          maskAccountText={maskAccountText}
+                          onSave={onUpdateImageGenerationAccounts}
+                          imageModelControl={
+                            <CodexImageModelSelect
+                              model={collection.imageGenerationModel}
+                              disabled={saving || testing || starting}
+                              onSave={onUpdateImageGenerationModel}
+                            />
+                          }
                         />
                       ) : null}
                     </div>

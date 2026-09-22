@@ -980,6 +980,19 @@ fn build_quota_data_from_response(
     project_id: Option<String>,
 ) -> QuotaData {
     let mut quota_data = QuotaData::new();
+    quota_data.quota_summary_stale = !quota_summary.as_ref()
+        .and_then(|summary| summary.get("groups")).and_then(Value::as_array)
+        .is_some_and(|groups| groups.iter().all(|group| {
+            group.get("buckets").and_then(Value::as_array).is_some_and(|buckets| {
+                buckets.iter().all(|bucket| {
+                    bucket.get("bucketId").and_then(Value::as_str).is_some_and(|id| !id.is_empty())
+                        && bucket.get("remainingFraction").and_then(Value::as_f64).is_some()
+                })
+            })
+        }));
+    if !quota_data.quota_summary_stale {
+        quota_data.quota_summary_updated_at = Some(quota_data.last_updated);
+    }
 
     for (name, info) in quota_response.models {
         let display_name = info
@@ -1038,6 +1051,33 @@ fn build_quota_data_from_response(
     quota_data
 }
 
+fn is_summary_bucket(name: &str) -> bool {
+    matches!(name, "3p-5h" | "claude:5h" | "3p-weekly" | "claude:weekly"
+        | "gemini-5h" | "gemini:5h" | "gemini-weekly" | "gemini:weekly")
+}
+
+/// Merge only real quota windows from this account's last successful summary.
+/// Fresh model-level data remains fresh; no model name is interpreted as a window.
+pub(crate) fn preserve_failed_quota_summary(quota: &mut QuotaData, previous: Option<&QuotaData>) {
+    if !quota.quota_summary_stale || quota.is_forbidden { return; }
+    let Some(previous) = previous else { return; };
+    if previous.is_forbidden || previous.project_id != quota.project_id
+        || previous.subscription_tier != quota.subscription_tier { return; }
+    for model in previous.models.iter().filter(|model| is_summary_bucket(&model.name)) {
+        if !quota.models.iter().any(|current| current.name == model.name) {
+            quota.models.push(model.clone());
+        }
+    }
+    if quota.models.iter().any(|model| is_summary_bucket(&model.name)) {
+        quota.quota_summary_updated_at = previous.quota_summary_updated_at
+            .or_else(|| (!previous.quota_summary_stale).then_some(previous.last_updated));
+    }
+}
+
+#[cfg(test)]
+#[path = "quota_summary_tests.rs"]
+mod summary_tests;
+
 pub async fn fetch_quota_for_token(
     token: &TokenData,
     email: &str,
@@ -1078,7 +1118,10 @@ pub async fn fetch_quota_with_context(
                 .as_deref()
                 .map(|p| p.trim() == "aicode-consumers")
                 .unwrap_or(false);
-            if !is_dirty_cache && is_api_cache_valid(&record) {
+            if !is_dirty_cache
+                && is_api_cache_valid(&record)
+                && record.project_id == effective_project_id
+            {
                 crate::modules::logger::log_info(&format!(
                     "[QuotaApiCache] Using api cache for {} (age: {}s)",
                     email,
@@ -1088,7 +1131,7 @@ pub async fn fetch_quota_with_context(
                     serde_json::from_value::<QuotaResponse>(record.payload.clone())
                 {
                     let quota_summary = record.payload.get("quota_summary").cloned();
-                    let quota_data = build_quota_data_from_response(
+                    let mut quota_data = build_quota_data_from_response(
                         quota_response,
                         subscription_tier.clone(),
                         credits.clone(),
@@ -1096,6 +1139,11 @@ pub async fn fetch_quota_with_context(
                         is_gcp_tos,
                         resolved_project_id.clone(),
                     );
+                    // A cache hit is not a new successful query.
+                    quota_data.last_updated = record.updated_at / 1000;
+                    if quota_data.quota_summary_updated_at.is_some() {
+                        quota_data.quota_summary_updated_at = Some(record.updated_at / 1000);
+                    }
                     return Ok(QuotaFetchResult {
                         quota: quota_data,
                         error: None,
@@ -1103,7 +1151,7 @@ pub async fn fetch_quota_with_context(
                 }
             } else {
                 crate::modules::logger::log_info(&format!(
-                    "[QuotaApiCache] Cache expired for {} (age: {}s), fetching from network",
+                    "[QuotaApiCache] Cache expired or project changed for {} (age: {}s), fetching from network",
                     email,
                     api_cache_age_secs(&record),
                 ));
