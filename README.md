@@ -42,7 +42,7 @@
       </a>
     </td>
     <td>
-      感谢 <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> 赞助了本项目！<a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> 是专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 $0.006/张，1 美元可出图 160+ 张。图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码。按量付费、无月费，通过此<a href="https://go.apimart.ai/gh-cockpit-tools"><strong>注册链接</strong></a>注册即可开用。
+      感谢 <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> 赞助了本项目！<a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> 是专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 <strong>$0.006/张</strong>，<strong>1 美元</strong>可出图 <strong>160+ 张</strong>。图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批<strong>万张</strong>不超时、换模型不改代码。按量付费、无月费，通过此<a href="https://go.apimart.ai/gh-cockpit-tools"><strong>注册链接</strong></a>注册即可开用。
     </td>
   </tr>
   <tr>

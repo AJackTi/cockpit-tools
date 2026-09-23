@@ -41,7 +41,7 @@ A **universal AI IDE account management tool**, currently supporting **Antigravi
       </a>
     </td>
     <td>
-      Thanks to <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> for sponsoring this project! <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> is a low-cost API platform for AI image &amp; video generation — GPT-Image-2 from $0.006/image, 160+ images per dollar. One async API covers both image and video: submit a task, get an ID, fetch results via polling or callback. Batch tens of thousands of images without timeouts, switch models without changing code. Pay-as-you-go with no monthly fee — <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>sign up here</strong></a> to get started.
+      Thanks to <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> for sponsoring this project! <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>APIMart</strong></a> is a low-cost API platform for AI image &amp; video generation — GPT-Image-2 from <strong>$0.006/image</strong>, <strong>160+ images per dollar</strong>. One async API covers both image and video: submit a task, get an ID, fetch results via polling or callback. Batch <strong>tens of thousands of images</strong> without timeouts, switch models without changing code. Pay-as-you-go with no monthly fee — <a href="https://go.apimart.ai/gh-cockpit-tools"><strong>sign up here</strong></a> to get started.
     </td>
   </tr>
   <tr>
